@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can only read and write their own profile
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Donor profiles: read own, write only from server Admin SDK
+    match /donor_profiles/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Medical records: read own only; all writes go through backend Admin SDK
+    match /medical_records/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Medical history logs: read own only
+    match /medical_history_logs/{logId} {
+      allow read: if request.auth != null && resource.data.user_id == request.auth.uid;
+      allow write: if false;
+    }
+
+    // Crisis requests: authenticated users can create and read
+    match /crisis_requests/{id} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if false; // Server-side only
+    }
+
+    // Donor responses: donor can read their own responses
+    match /donor_responses/{id} {
+      allow read: if request.auth != null && resource.data.donor_id == request.auth.uid;
+      allow write: if false; // Server-side only via Admin SDK
+    }
+
+    // Blood banks: any authenticated user can read
+    match /blood_banks/{id} {
+      allow read: if request.auth != null;
+      allow write: if false; // Admin SDK only
+    }
+
+    // Notifications: user can read & mark their own as read
+    match /notifications/{id} {
+      allow read: if request.auth != null && resource.data.user_id == request.auth.uid;
+      allow update: if request.auth != null &&
+        resource.data.user_id == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow write: if false;
+    }
+  }
+}

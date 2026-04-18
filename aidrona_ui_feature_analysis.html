@@ -1,0 +1,238 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.root{padding:1.5rem 0}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.5rem}
+.tab{padding:7px 14px;border-radius:999px;border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;font-size:13px;color:var(--color-text-secondary);transition:all .15s}
+.tab.active{background:var(--color-background-info);color:var(--color-text-info);border-color:transparent;font-weight:500}
+.section{display:none}.section.active{display:block}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:12px}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem}
+.card-title{font-size:14px;font-weight:500;color:var(--color-text-primary);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.card-sub{font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin-bottom:10px}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:500;margin-right:4px;margin-bottom:4px}
+.b-red{background:var(--color-background-danger);color:var(--color-text-danger)}
+.b-blue{background:var(--color-background-info);color:var(--color-text-info)}
+.b-green{background:var(--color-background-success);color:var(--color-text-success)}
+.b-amber{background:var(--color-background-warning);color:var(--color-text-warning)}
+.b-gray{background:var(--color-background-secondary);color:var(--color-text-secondary)}
+.chip{font-size:11px;padding:3px 9px;border-radius:999px;border:0.5px solid var(--color-border-secondary);color:var(--color-text-secondary);display:inline-block;margin:2px}
+.icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.ic-red{background:var(--color-background-danger)}
+.ic-blue{background:var(--color-background-info)}
+.ic-green{background:var(--color-background-success)}
+.ic-amber{background:var(--color-background-warning)}
+.ic-gray{background:var(--color-background-secondary)}
+.screen-row{display:flex;gap:10px;margin-bottom:10px;align-items:flex-start}
+.screen-num{width:24px;height:24px;border-radius:50%;background:var(--color-background-info);color:var(--color-text-info);font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.screen-body{flex:1}
+.screen-name{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.screen-desc{font-size:12px;color:var(--color-text-secondary);line-height:1.5;margin-top:2px}
+.divider{border:none;border-top:0.5px solid var(--color-border-tertiary);margin:12px 0}
+.score-bar{height:6px;border-radius:3px;background:var(--color-border-tertiary);margin-top:6px;overflow:hidden}
+.score-fill{height:100%;border-radius:3px}
+.suggest-num{width:22px;height:22px;border-radius:50%;background:var(--color-background-warning);color:var(--color-text-warning);font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sug-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px}
+.sug-body{flex:1}
+.sug-title{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.sug-desc{font-size:12px;color:var(--color-text-secondary);line-height:1.5;margin-top:2px}
+.role-card{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:.8rem 1rem;background:var(--color-background-primary)}
+.role-title{font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:6px}
+.flow-step{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
+.step-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.priority-pill{font-size:10px;padding:1px 6px;border-radius:999px;border:0.5px solid var(--color-border-secondary);color:var(--color-text-tertiary)}
+</style>
+<div class="root">
+<div class="tabs">
+  <button class="tab active" onclick="show('overview',this)">Overview</button>
+  <button class="tab" onclick="show('screens',this)">Screens</button>
+  <button class="tab" onclick="show('roles',this)">User Roles</button>
+  <button class="tab" onclick="show('flows',this)">Core Flows</button>
+  <button class="tab" onclick="show('suggestions',this)">My Suggestions</button>
+</div>
+
+<div id="overview" class="section active">
+  <div style="margin-bottom:16px">
+    <p style="font-size:13px;color:var(--color-text-secondary);line-height:1.6">Based on both documents, AIdrona is a medically-intelligent emergency coordination layer. The UI needs to serve <strong style="color:var(--color-text-primary);font-weight:500">4 distinct roles</strong>, support <strong style="color:var(--color-text-primary);font-weight:500">2 crisis types</strong>, and communicate real-time AI decisions clearly under extreme stress.</p>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title"><div class="icon ic-red">🩸</div> Blood crisis module</div>
+      <div class="card-sub">AI triage, donor ranking by fitness score, escalating radius search, acceptance/decline popups, doctor verification loop</div>
+      <span class="badge b-red">Severity score 1–10</span>
+      <span class="badge b-blue">Fitness score composite</span>
+      <span class="badge b-amber">Radius escalation</span>
+    </div>
+    <div class="card">
+      <div class="card-title"><div class="icon ic-blue">💉</div> Vaccine / rabies module</div>
+      <div class="card-sub">Bite incident report, hospital map with live stock, auto WHO dose schedule (Day 0→3→7→14→28), passive stock decrement on check-in</div>
+      <span class="badge b-blue">5-dose schedule tracker</span>
+      <span class="badge b-green">Pre-dose stock check</span>
+      <span class="badge b-gray">Smart rerouting</span>
+    </div>
+    <div class="card">
+      <div class="card-title"><div class="icon ic-green">🧠</div> AIdrona health profile</div>
+      <div class="card-sub">Medical conditions, medications, prescriptions (PDF/image), hemoglobin level, donation history — all feeding into AI eligibility and fitness scoring</div>
+      <span class="badge b-green">Eligible</span>
+      <span class="badge b-amber">Temp. not eligible</span>
+      <span class="badge b-red">Not eligible</span>
+    </div>
+    <div class="card">
+      <div class="card-title"><div class="icon ic-gray">🏥</div> Institutional dashboards</div>
+      <div class="card-sub">Hospitals verify donors on-site and update vaccine stock; blood banks manage blood group inventory and act as fallback when no donor accepts</div>
+      <span class="badge b-gray">Hospital staff</span>
+      <span class="badge b-gray">Blood bank admin</span>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title" style="margin-bottom:8px">Fitness score formula — what drives the core AI decision</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px">
+      <div>
+        <div style="font-size:12px;color:var(--color-text-secondary)">Hemoglobin level</div>
+        <div class="score-bar"><div class="score-fill" style="width:30%;background:var(--color-text-danger)"></div></div>
+        <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:3px">30% weight</div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--color-text-secondary)">Days since donation</div>
+        <div class="score-bar"><div class="score-fill" style="width:30%;background:var(--color-text-info)"></div></div>
+        <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:3px">30% weight</div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--color-text-secondary)">Donation count</div>
+        <div class="score-bar"><div class="score-fill" style="width:20%;background:var(--color-text-success)"></div></div>
+        <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:3px">20% weight</div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--color-text-secondary)">No disqualifiers bonus</div>
+        <div class="score-bar"><div class="score-fill" style="width:20%;background:var(--color-text-warning)"></div></div>
+        <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:3px">20% weight − doctor penalty</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="screens" class="section">
+  <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:16px;line-height:1.6">These are the distinct screens I'll design for the AIdrona UI, mapped from both documents:</p>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:10px"><span class="badge b-blue" style="font-size:12px">User app</span></div>
+      <div class="screen-row"><div class="screen-num">1</div><div class="screen-body"><div class="screen-name">Onboarding & role setup</div><div class="screen-desc">Blood type, location, role (donor / requester / both). Sets context for everything else.</div></div></div>
+      <div class="screen-row"><div class="screen-num">2</div><div class="screen-body"><div class="screen-name">AIdrona health profile</div><div class="screen-desc">Upload hemoglobin, conditions, medications, prescriptions (image/PDF). The data vault that powers eligibility.</div></div></div>
+      <div class="screen-row"><div class="screen-num">3</div><div class="screen-body"><div class="screen-name">Eligibility & fitness dashboard</div><div class="screen-desc">Radial fitness score, eligibility status card, expiry alerts on medical records (6-month window).</div></div></div>
+      <div class="screen-row"><div class="screen-num">4</div><div class="screen-body"><div class="screen-name">Emergency alert popup</div><div class="screen-desc">Blood type needed, distance, urgency level, Accept / Decline. Time-sensitive — must be frictionless.</div></div></div>
+      <div class="screen-row"><div class="screen-num">5</div><div class="screen-body"><div class="screen-name">Raise a blood request</div><div class="screen-desc">Blood type, auto-GPS location, urgency description. Triggers AI triage and donor dispatch.</div></div></div>
+      <div class="screen-row"><div class="screen-num">6</div><div class="screen-body"><div class="screen-name">Donor search live view</div><div class="screen-desc">Map with expanding radius ring, ranked donor list with fitness scores, countdown timer, escalation status.</div></div></div>
+      <div class="screen-row"><div class="screen-num">7</div><div class="screen-body"><div class="screen-name">Bite / vaccine incident report</div><div class="screen-desc">Animal type, bite severity, location. AI assesses rabies risk and kicks off hospital search.</div></div></div>
+      <div class="screen-row"><div class="screen-num">8</div><div class="screen-body"><div class="screen-name">Hospital map & stock view</div><div class="screen-desc">Nearby hospitals with real-time vaccine stock counts. User selects for Dose 1.</div></div></div>
+      <div class="screen-row"><div class="screen-num">9</div><div class="screen-body"><div class="screen-name">Dose schedule tracker</div><div class="screen-desc">WHO protocol calendar (Day 0/3/7/14/28), pre-dose stock alerts, check-in confirmation per dose.</div></div></div>
+      <div class="screen-row"><div class="screen-num">10</div><div class="screen-body"><div class="screen-name">Donation history</div><div class="screen-desc">Past donations, doctor verifications, fitness score trend over time.</div></div></div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-title" style="margin-bottom:10px"><span class="badge b-gray" style="font-size:12px">Hospital staff app</span></div>
+        <div class="screen-row"><div class="screen-num" style="background:var(--color-background-secondary);color:var(--color-text-secondary)">A</div><div class="screen-body"><div class="screen-name">Incoming donor verification</div><div class="screen-desc">View donor's AIdrona profile, mark Fit or Unfit — triggers score update + re-dispatch if rejected.</div></div></div>
+        <div class="screen-row"><div class="screen-num" style="background:var(--color-background-secondary);color:var(--color-text-secondary)">B</div><div class="screen-body"><div class="screen-name">Vaccine stock management</div><div class="screen-desc">Update vaccine availability by type. System auto-decrements on user check-in.</div></div></div>
+        <div class="screen-row"><div class="screen-num" style="background:var(--color-background-secondary);color:var(--color-text-secondary)">C</div><div class="screen-body"><div class="screen-name">Active crisis dashboard</div><div class="screen-desc">View open blood requests in the hospital's vicinity, respond to escalated requests.</div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:10px"><span class="badge b-gray" style="font-size:12px">Blood bank portal</span></div>
+        <div class="screen-row"><div class="screen-num" style="background:var(--color-background-secondary);color:var(--color-text-secondary)">I</div><div class="screen-body"><div class="screen-name">Blood group inventory</div><div class="screen-desc">Update real-time stock by blood group (A+, O-, B+, etc.). System queries this as escalation fallback.</div></div></div>
+        <div class="screen-row"><div class="screen-num" style="background:var(--color-background-secondary);color:var(--color-text-secondary)">II</div><div class="screen-body"><div class="screen-name">Escalated request inbox</div><div class="screen-desc">Receives API-triggered queries when no donor accepts within the escalation window. Confirm or decline.</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="roles" class="section">
+  <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:16px;line-height:1.6">Four distinct role personas drive different UI contexts. One user can hold multiple roles simultaneously.</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+    <div class="role-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div class="icon ic-red" style="font-size:18px">🩸</div><div class="role-title" style="margin:0">Donor</div></div>
+      <div style="font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin-bottom:8px">Uploads health data, receives emergency popups, accepts/declines, visits hospital for doctor check-in.</div>
+      <div><span class="chip">Health profile</span><span class="chip">Eligibility status</span><span class="chip">Fitness score</span><span class="chip">Alert popups</span><span class="chip">Donation history</span></div>
+    </div>
+    <div class="role-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div class="icon ic-blue" style="font-size:18px">📢</div><div class="role-title" style="margin:0">Requester</div></div>
+      <div style="font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin-bottom:8px">Raises blood or vaccine request, watches live donor search map, tracks severity score and escalation.</div>
+      <div><span class="chip">Crisis trigger form</span><span class="chip">Live donor map</span><span class="chip">Severity score</span><span class="chip">Escalation status</span></div>
+    </div>
+    <div class="role-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div class="icon ic-green" style="font-size:18px">🏥</div><div class="role-title" style="margin:0">Hospital staff</div></div>
+      <div style="font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin-bottom:8px">Registers via controlled access, verifies donors physically, updates vaccine stock, marks fit/unfit.</div>
+      <div><span class="chip">Donor verification</span><span class="chip">Fit / Unfit marking</span><span class="chip">Vaccine stock</span><span class="chip">Crisis inbox</span></div>
+    </div>
+    <div class="role-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div class="icon ic-amber" style="font-size:18px">🏦</div><div class="role-title" style="margin:0">Blood bank admin</div></div>
+      <div style="font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin-bottom:8px">Registered via admin access, manages blood group inventory, acts as escalation fallback when no donor responds.</div>
+      <div><span class="chip">Blood group inventory</span><span class="chip">Escalation inbox</span><span class="chip">Real-time stock</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="flows" class="section">
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:10px"><span class="badge b-red">Blood crisis flow</span> — 6 steps</div>
+      <div class="flow-step"><div class="step-dot" style="background:var(--color-text-danger)"></div><div><div class="screen-name">1. Crisis trigger</div><div class="screen-desc">User inputs blood type + GPS location + urgency via text or voice</div></div></div>
+      <div class="flow-step"><div class="step-dot" style="background:var(--color-text-danger)"></div><div><div class="screen-name">2. AI triage</div><div class="screen-desc">Gemini computes severity score 1–10; ≥8 = high-priority dispatch</div></div></div>
+      <div class="flow-step"><div class="step-dot" style="background:var(--color-text-danger)"></div><div><div class="screen-name">3. Donor ranking</div><div class="screen-desc">Top 3–5 donors by fitness score within 5 km radius get popup</div></div></div>
+      <div class="flow-step"><div class="step-dot" style="background:var(--color-text-danger)"></div><div><div class="screen-name">4. Popup dispatch & acceptance</div><div class="screen-desc">Blood type, distance, urgency shown. Accept locks in the donor. Decline routes to next.</div></div></div>
+      <div class="flow-step"><div class="step-dot" style="background:var(--color-text-warning)"></div><div><div class="screen-name">5. Timer & escalation</div><div class="screen-desc">No response → radius expands (5→15 km), blood banks queried in parallel</div></div></div>
+      <div class="flow-step"><div class="step-dot" style="background:var(--color-text-success)"></div><div><div class="screen-name">6. Doctor verification</div><div class="screen-desc">Cleared: donation proceeds + score improves. Unfit: re-dispatch + permanent score penalty.</div></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="margin-bottom:10px"><span class="badge b-blue">Vaccine / rabies flow</span> — 5 steps</div>
+      <div class="flow-step"><div class="step-dot" style="background:var(--color-text-info)"></div><div><div class="screen-name">1. Incident report</div><div class="screen-desc">Animal type, bite severity, time. AI assesses rabies risk level.</div></div></div>
+      <div class="flow-step"><div class="step-dot" style="background:var(--color-text-info)"></div><div><div class="screen-name">2. Hospital search</div><div class="screen-desc">Map of nearby hospitals with real-time rabies vaccine stock counts. User picks, receives Dose 1.</div></div></div>
+      <div class="flow-step"><div class="step-dot" style="background:var(--color-text-info)"></div><div><div class="screen-name">3. Auto schedule creation</div><div class="screen-desc">Full WHO PEP protocol generated on Dose 1 log — Day 0, 3, 7, 14, 28.</div></div></div>
+      <div class="flow-step"><div class="step-dot" style="background:var(--color-text-info)"></div><div><div class="screen-name">4. Pre-dose stock check</div><div class="screen-desc">Before each due date, app checks chosen hospital stock. If empty, finds nearest alternative automatically.</div></div></div>
+      <div class="flow-step"><div class="step-dot" style="background:var(--color-text-success)"></div><div><div class="screen-name">5. Check-in & passive tracking</div><div class="screen-desc">User confirms dose taken → marks schedule complete → decrements hospital stock by 1 automatically.</div></div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:8px">AIdrona eligibility engine — runs before every alert dispatch</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div style="flex:1;min-width:160px"><div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:4px">Inputs analyzed</div><div><span class="chip">Hemoglobin (g/dL)</span><span class="chip">Last donation date</span><span class="chip">Active medications</span><span class="chip">Medical conditions</span><span class="chip">Doctor prescriptions</span><span class="chip">Disqualifier list</span><span class="chip">3-month gap rule</span></div></div>
+      <div style="width:0.5px;background:var(--color-border-tertiary)"></div>
+      <div style="flex:1;min-width:160px"><div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:4px">Output states</div><div><span class="badge b-green" style="margin-bottom:6px;display:inline-block">Eligible — receives alerts</span><br><span class="badge b-amber" style="margin-bottom:6px;display:inline-block">Temp. not eligible — paused</span><br><span class="badge b-red" style="display:inline-block">Not eligible — permanently blocked</span></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="suggestions" class="section">
+  <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:16px;line-height:1.6">These are my design and feature recommendations on top of what both documents specify — things that will make AIdrona genuinely excellent.</p>
+  <div class="grid2">
+    <div>
+      <div class="sug-row"><div class="suggest-num">1</div><div class="sug-body"><div class="sug-title">Emergency-first visual design</div><div class="sug-desc">Use a deep crimson + off-white palette. The emergency popup must be full-screen with massive tap targets — not a small notification card. In a crisis, users are panicking.</div></div></div>
+      <hr class="divider">
+      <div class="sug-row"><div class="suggest-num">2</div><div class="sug-body"><div class="sug-title">Radial fitness score gauge</div><div class="sug-desc">Display the fitness score as an arc/radial gauge (0–100), not just a number. Users will understand their health standing visually. Color-code: green &gt;70, amber 40–70, red &lt;40.</div></div></div>
+      <hr class="divider">
+      <div class="sug-row"><div class="suggest-num">3</div><div class="sug-body"><div class="sug-title">Animated escalation radius on the map</div><div class="sug-desc">Show a pulsing ring that visibly expands from 5→15 km on the requester's live map when the timer escalates. This reassures the requester the system is still working.</div></div></div>
+      <hr class="divider">
+      <div class="sug-row"><div class="suggest-num">4</div><div class="sug-body"><div class="sug-title">Voice input for crisis triggering</div><div class="sug-desc">Someone in an emergency may not be able to type accurately. Add voice-to-text for the blood crisis form — blood type and urgency can be spoken in seconds.</div></div></div>
+      <hr class="divider">
+      <div class="sug-row"><div class="suggest-num">5</div><div class="sug-body"><div class="sug-title">Medical record expiry reminders</div><div class="sug-desc">Records expire after 6 months. Show a countdown banner on the health dashboard 30 days before expiry — otherwise the donor silently becomes ineligible with no warning.</div></div></div>
+    </div>
+    <div>
+      <div class="sug-row"><div class="suggest-num">6</div><div class="sug-body"><div class="sug-title">WhatsApp / SMS fallback alerts</div><div class="sug-desc">Push notifications fail when the app is closed or data is weak. For India, sending a WhatsApp message or SMS as backup for the emergency popup is critical for rural users.</div></div></div>
+      <hr class="divider">
+      <div class="sug-row"><div class="suggest-num">7</div><div class="sug-body"><div class="sug-title">QR code for doctor sign-off</div><div class="sug-desc">Hospitals can scan a donor's profile QR code on-site to instantly mark them Fit or Unfit — instead of requiring hospital staff to navigate a full dashboard under time pressure.</div></div></div>
+      <hr class="divider">
+      <div class="sug-row"><div class="suggest-num">8</div><div class="sug-body"><div class="sug-title">Tamil & Hindi localisation</div><div class="sug-desc">This is built for India. All critical screens — especially the emergency popup and eligibility status — should support Tamil and Hindi. English-only will exclude a large portion of your real users.</div></div></div>
+      <hr class="divider">
+      <div class="sug-row"><div class="suggest-num">9</div><div class="sug-body"><div class="sug-title">Dose schedule calendar widget</div><div class="sug-desc">The vaccine tracking screen should show a visual timeline, not a plain list. Show which doses are done (✓), upcoming (with days remaining), and missed — with a reschedule option for missed doses.</div></div></div>
+      <hr class="divider">
+      <div class="sug-row"><div class="suggest-num">10</div><div class="sug-body"><div class="sug-title">Progressive onboarding — medical data last</div><div class="sug-desc">Don't ask for hemoglobin and prescriptions during signup. Let users enter and explore first, then prompt them to "complete your AIdrona profile" to unlock donor eligibility. Reduces drop-off.</div></div></div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
