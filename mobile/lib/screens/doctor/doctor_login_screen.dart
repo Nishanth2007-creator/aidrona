@@ -66,12 +66,24 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              GestureDetector(
+                onTap: () => context.go('/role-select'),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceCard,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.arrow_back_ios_new_rounded,
+                      color: AppTheme.onSurface, size: 18),
+                ),
+              ),
               const Spacer(),
               Container(
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                    color: AppTheme.teal.withOpacity(0.15),
+                    color: AppTheme.teal.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(14)),
                 child: const Icon(Icons.local_hospital_rounded,
                     color: AppTheme.teal, size: 30),
@@ -129,10 +141,10 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                        color: AppTheme.danger.withOpacity(0.1),
+                        color: AppTheme.danger.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                            color: AppTheme.danger.withOpacity(0.4))),
+                            color: AppTheme.danger.withValues(alpha: 0.4))),
                     child: Row(
                       children: [
                         const Icon(Icons.error_outline,

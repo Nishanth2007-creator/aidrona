@@ -76,7 +76,7 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
               Positioned(bottom: 20, left: 0, right: 0, child: Center(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(color: AppTheme.surfaceCard.withOpacity(0.85), borderRadius: BorderRadius.circular(20)),
+                  decoration: BoxDecoration(color: AppTheme.surfaceCard.withValues(alpha: 0.85), borderRadius: BorderRadius.circular(20)),
                   child: const Text('Point camera at patient QR code', style: TextStyle(fontFamily: 'Inter', color: AppTheme.onSurface, fontSize: 13)),
                 ),
               )),

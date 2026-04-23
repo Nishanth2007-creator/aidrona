@@ -6,7 +6,7 @@ const { evaluateDonorFitness } = require('../ai/gemini');
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { uid, name, phone, blood_type, lat, lng, fcm_token, role } = req.body;
+    const { uid, name, phone, blood_type, lat, lng, fcm_token, role, emergency_contact_name, emergency_contact_phone } = req.body;
     if (!uid || !name || !phone || !blood_type) {
       return res.status(400).json({ error: 'uid, name, phone, blood_type are required' });
     }
@@ -15,7 +15,17 @@ router.post('/register', async (req, res) => {
     const existing = await getUser(uid);
     if (existing) return res.status(409).json({ error: 'User already registered' });
 
-    await createUser(uid, { name, phone, blood_type, lat: lat || 0, lng: lng || 0, fcm_token: fcm_token || '', role: role || 'patient' });
+    await createUser(uid, { 
+      name, 
+      phone, 
+      blood_type, 
+      lat: lat || 0, 
+      lng: lng || 0, 
+      fcm_token: fcm_token || '', 
+      role: role || 'patient',
+      emergency_contact_name: emergency_contact_name || '',
+      emergency_contact_phone: emergency_contact_phone || ''
+    });
 
     // Create an initial donor profile with a default fitness score
     const initialFitness = await evaluateDonorFitness({

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,6 +10,7 @@ import 'services/api_service.dart';
 import 'providers/user_provider.dart';
 import 'providers/crisis_provider.dart';
 import 'screens/splash_screen.dart';
+import 'screens/role_selection_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/request_blood_screen.dart';
@@ -22,18 +24,23 @@ import 'screens/doctor/doctor_login_screen.dart';
 import 'screens/doctor/scan_qr_screen.dart';
 import 'screens/doctor/update_medical_screen.dart';
 import 'screens/doctor/verify_donor_screen.dart';
+import 'screens/admin/admin_login_screen.dart';
+import 'screens/admin/admin_dashboard_screen.dart';
 import 'theme/app_theme.dart';
+import 'widgets/main_shell.dart';
 
 // Background/terminated message handler (must be top-level)
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  // Notification is stored in Firestore; no extra action needed here.
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+
+  // Pre-cache Inter font so there's zero jank on first render
+  await GoogleFonts.pendingFonts([GoogleFonts.inter()]);
 
   // FCM: request permission and register background handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -97,35 +104,126 @@ class _AiDronaAppState extends State<AiDronaApp> {
   }
 }
 
+// ── Smooth slide-fade transition helper ──────────────────────────
+CustomTransitionPage<void> _slideFade(Widget child, GoRouterState state) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 220),
+    reverseTransitionDuration: const Duration(milliseconds: 180),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.04, 0),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
+// ── Router ───────────────────────────────────────────────────────
 final GoRouter _router = GoRouter(
   initialLocation: '/splash',
   routes: [
-    GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
-    GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
-    GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
-    GoRoute(path: '/request/blood', builder: (_, __) => const RequestBloodScreen()),
+    // ── Splash & Role Selection ──
+    GoRoute(
+      path: '/splash',
+      pageBuilder: (_, __) => const NoTransitionPage(child: SplashScreen()),
+    ),
+    GoRoute(
+      path: '/role-select',
+      pageBuilder: (ctx, state) => _slideFade(const RoleSelectionScreen(), state),
+    ),
+    GoRoute(
+      path: '/onboarding',
+      pageBuilder: (ctx, state) => _slideFade(const OnboardingScreen(), state),
+    ),
+
+    // ── Main shell with persistent bottom nav & IndexedStack tabs ──
+    StatefulShellRoute.indexedStack(
+      builder: (ctx, state, navigationShell) =>
+          MainShell(navigationShell: navigationShell),
+      branches: [
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+        ]),
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/requests', builder: (_, __) => const MyRequestsScreen()),
+        ]),
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/medical-history', builder: (_, __) => const MedicalHistoryScreen()),
+        ]),
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
+        ]),
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+        ]),
+      ],
+    ),
+
+    // ── Non-tab routes with smooth transitions ──────────────────
+    GoRoute(
+      path: '/request/blood',
+      pageBuilder: (ctx, state) => _slideFade(const RequestBloodScreen(), state),
+    ),
     GoRoute(
       path: '/donor/incoming',
-      builder: (ctx, state) => DonorIncomingScreen(crisisId: state.uri.queryParameters['crisis_id'] ?? ''),
+      pageBuilder: (ctx, state) => _slideFade(
+        DonorIncomingScreen(
+          crisisId: state.uri.queryParameters['crisis_id'] ?? '',
+        ),
+        state,
+      ),
     ),
-    GoRoute(path: '/requests', builder: (_, __) => const MyRequestsScreen()),
-    GoRoute(path: '/medical-history', builder: (_, __) => const MedicalHistoryScreen()),
-    GoRoute(path: '/qr', builder: (_, __) => const QrCodeScreen()),
-    GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
-    GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
-    // Doctor routes
-    GoRoute(path: '/doctor/login', builder: (_, __) => const DoctorLoginScreen()),
-    GoRoute(path: '/doctor/scan', builder: (_, __) => const ScanQrScreen()),
+    GoRoute(
+      path: '/qr',
+      pageBuilder: (ctx, state) => _slideFade(const QrCodeScreen(), state),
+    ),
+
+    // ── Doctor routes ───────────────────────────────────────────
+    GoRoute(
+      path: '/doctor/login',
+      pageBuilder: (ctx, state) => _slideFade(const DoctorLoginScreen(), state),
+    ),
+    GoRoute(
+      path: '/doctor/scan',
+      pageBuilder: (ctx, state) => _slideFade(const ScanQrScreen(), state),
+    ),
     GoRoute(
       path: '/doctor/update/:patient_id',
-      builder: (ctx, state) => UpdateMedicalScreen(patientId: state.pathParameters['patient_id'] ?? ''),
+      pageBuilder: (ctx, state) => _slideFade(
+        UpdateMedicalScreen(
+          patientId: state.pathParameters['patient_id'] ?? '',
+        ),
+        state,
+      ),
     ),
     GoRoute(
       path: '/doctor/verify/:donor_id',
-      builder: (ctx, state) => VerifyDonorScreen(
-        donorId: state.pathParameters['donor_id'] ?? '',
-        crisisId: state.uri.queryParameters['crisis_id'] ?? '',
+      pageBuilder: (ctx, state) => _slideFade(
+        VerifyDonorScreen(
+          donorId: state.pathParameters['donor_id'] ?? '',
+          crisisId: state.uri.queryParameters['crisis_id'] ?? '',
+        ),
+        state,
       ),
+    ),
+
+    // ── Admin routes ────────────────────────────────────────────
+    GoRoute(
+      path: '/admin/login',
+      pageBuilder: (ctx, state) => _slideFade(const AdminLoginScreen(), state),
+    ),
+    GoRoute(
+      path: '/admin/dashboard',
+      pageBuilder: (ctx, state) => _slideFade(const AdminDashboardScreen(), state),
     ),
   ],
 );

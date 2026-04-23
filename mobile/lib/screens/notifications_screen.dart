@@ -170,7 +170,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
               color: unread
-                  ? _colorFor(type).withOpacity(0.3)
+                  ? _colorFor(type).withValues(alpha: 0.3)
                   : Colors.transparent),
         ),
         child: Row(
@@ -179,7 +179,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                  color: _colorFor(type).withOpacity(0.15),
+                  color: _colorFor(type).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12)),
               child: Icon(_iconFor(type), color: _colorFor(type), size: 22),
             ),
@@ -226,10 +226,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Widget _buildEmpty() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
+        children: [
           Icon(Icons.notifications_none_rounded,
               size: 60, color: AppTheme.onSurfaceMuted),
           SizedBox(height: 16),

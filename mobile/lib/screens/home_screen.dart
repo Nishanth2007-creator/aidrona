@@ -17,8 +17,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedTab = 0;
-  bool _loading = true;
   List<Map<String, dynamic>> _recentActivity = [];
 
   @override
@@ -40,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (_) {}
-    if (mounted) setState(() => _loading = false);
+    if (mounted) setState(() {});
   }
 
   @override
@@ -103,7 +101,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(context),
     );
   }
 
@@ -130,6 +127,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeader(UserProvider user) {
+    final hour = DateTime.now().hour;
+    final String greeting;
+    final String icon;
+    if (hour < 12) { greeting = 'Good morning'; icon = '🌅'; }
+    else if (hour < 17) { greeting = 'Good afternoon'; icon = '☀️'; }
+    else { greeting = 'Good evening'; icon = '🌙'; }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
       child: Row(
@@ -138,8 +142,9 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Hello, ${user.name?.split(' ').first ?? 'User'} 👋', style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 22, color: AppTheme.onSurface)),
-                const Text('Stay safe, save lives', style: TextStyle(fontFamily: 'Inter', color: AppTheme.onSurfaceMuted, fontSize: 13)),
+                Text('$greeting,', style: const TextStyle(fontFamily: 'Inter', color: AppTheme.onSurfaceMuted, fontSize: 13)),
+                const SizedBox(height: 2),
+                Text('${user.name?.split(' ').first ?? 'User'} $icon', style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 24, color: AppTheme.onSurface)),
               ],
             ),
           ),
@@ -166,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: AppTheme.amber.withOpacity(0.15), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.amber.withOpacity(0.4))),
+      decoration: BoxDecoration(color: AppTheme.amber.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.amber.withValues(alpha: 0.4))),
       child: const Row(
         children: [
           Icon(Icons.warning_amber_rounded, color: AppTheme.amber, size: 20),
@@ -183,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         gradient: const LinearGradient(colors: [Color(0xFF1E1B30), Color(0xFF272340)], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -203,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           GestureDetector(
             onTap: () => context.push('/qr'),
-            child: Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.15), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.qr_code_2_rounded, color: AppTheme.primary, size: 26)),
+            child: Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: AppTheme.primary.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.qr_code_2_rounded, color: AppTheme.primary, size: 26)),
           ),
         ],
       ),
@@ -219,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           gradient: const LinearGradient(colors: [AppTheme.danger, Color(0xFFE05252)], begin: Alignment.topLeft, end: Alignment.bottomRight),
           borderRadius: BorderRadius.circular(18),
-          boxShadow: [BoxShadow(color: AppTheme.danger.withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 6))],
+          boxShadow: [BoxShadow(color: AppTheme.danger.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 6))],
         ),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -235,10 +240,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildQuickActions(BuildContext context) {
     final actions = [
-      _QuickAction('My Requests', Icons.history_rounded, '/requests'),
-      _QuickAction('Medical', Icons.medical_information_outlined, '/medical-history'),
-      _QuickAction('QR Code', Icons.qr_code_rounded, '/qr'),
-      _QuickAction('Profile', Icons.person_outline_rounded, '/profile'),
+      const _QuickAction('My Requests', Icons.history_rounded, '/requests'),
+      const _QuickAction('Medical', Icons.medical_information_outlined, '/medical-history'),
+      const _QuickAction('QR Code', Icons.qr_code_rounded, '/qr'),
+      const _QuickAction('Profile', Icons.person_outline_rounded, '/profile'),
     ];
     return GridView.count(
       shrinkWrap: true,
@@ -261,24 +266,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(a.label, style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: AppTheme.onSurfaceMuted), textAlign: TextAlign.center),
         ],
       ),
-    );
-  }
-
-  Widget _buildBottomNav(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: _selectedTab,
-      onTap: (i) {
-        setState(() => _selectedTab = i);
-        const routes = ['/home', '/requests', '/medical-history', '/notifications', '/profile'];
-        context.go(routes[i]);
-      },
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home_rounded), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.history_outlined), activeIcon: Icon(Icons.history_rounded), label: 'Requests'),
-        BottomNavigationBarItem(icon: Icon(Icons.medical_information_outlined), activeIcon: Icon(Icons.medical_information_rounded), label: 'Medical'),
-        BottomNavigationBarItem(icon: Icon(Icons.notifications_outlined), activeIcon: Icon(Icons.notifications_rounded), label: 'Alerts'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline_rounded), activeIcon: Icon(Icons.person_rounded), label: 'Profile'),
-      ],
     );
   }
 }

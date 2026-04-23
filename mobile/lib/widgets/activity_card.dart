@@ -24,7 +24,7 @@ class ActivityCard extends StatelessWidget {
         children: [
           Container(
             width: 36, height: 36,
-            decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: AppTheme.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
             child: const Icon(Icons.bloodtype_outlined, color: AppTheme.primary, size: 18),
           ),
           const SizedBox(width: 12),
@@ -34,7 +34,7 @@ class ActivityCard extends StatelessWidget {
           ])),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(color: _statusColor.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(color: _statusColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
             child: Text(status, style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, color: _statusColor, fontSize: 11)),
           ),
         ],

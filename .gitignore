@@ -1,0 +1,30 @@
+# Node.js
+node_modules/
+dist/
+.env
+*.log
+
+# Firebase / Google Cloud
+service-account-key.json
+*.local
+
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+ios/.generated/
+android/app/src/main/res/values/strings.xml
+*.keystore
+*.jks
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -43,23 +43,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           // Avatar + name
           Center(
-            child: Column(
-              children: [
-                Container(
-                  width: 80, height: 80,
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(colors: [AppTheme.primary, Color(0xFF8B7CF8)]),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(child: Text(user.name?.isNotEmpty == true ? user.name![0].toUpperCase() : 'U', style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 32, color: Colors.white))),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppTheme.primary.withValues(alpha: 0.1), Colors.transparent],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
-                const SizedBox(height: 12),
-                Text(user.name ?? '—', style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 20, color: AppTheme.onSurface)),
-                const SizedBox(height: 4),
-                Text(user.phone ?? '—', style: const TextStyle(fontFamily: 'Inter', color: AppTheme.onSurfaceMuted)),
-                const SizedBox(height: 8),
-                EligibilityBadge(isEligible: user.isEligible),
-              ],
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 80, height: 80,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [AppTheme.primary, Color(0xFF8B7CF8)]),
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: AppTheme.primary.withValues(alpha: 0.3), blurRadius: 16)],
+                    ),
+                    child: Center(child: Text(user.name?.isNotEmpty == true ? user.name![0].toUpperCase() : 'U', style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 32, color: Colors.white))),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(user.name ?? '—', style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 20, color: AppTheme.onSurface)),
+                  const SizedBox(height: 4),
+                  Text(user.phone ?? '—', style: const TextStyle(fontFamily: 'Inter', color: AppTheme.onSurfaceMuted)),
+                  const SizedBox(height: 12),
+                  EligibilityBadge(isEligible: user.isEligible),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 28),
@@ -98,11 +111,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Navigator.pop(context);
                         final uid = context.read<AuthService>().uid;
                         if (uid == null) return;
+                        final apiService = context.read<ApiService>();
+                        final authService = context.read<AuthService>();
                         try {
-                          await context.read<ApiService>().deleteAccount(uid);
+                          await apiService.deleteAccount(uid);
                         } catch (_) {}
                         try {
-                          await context.read<AuthService>().signOut();
+                          await authService.signOut();
                         } catch (_) {}
                         if (context.mounted) context.go('/onboarding');
                       },
@@ -145,7 +160,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       subtitle: Text(sub, style: const TextStyle(fontFamily: 'Inter', color: AppTheme.onSurfaceMuted, fontSize: 12)),
       trailing: _updatingDonor
           ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary))
-          : Switch(value: value, onChanged: onChanged, activeColor: AppTheme.primary),
+          : Switch(value: value, onChanged: onChanged, activeTrackColor: AppTheme.primary.withValues(alpha: 0.5), activeThumbColor: AppTheme.primary),
     );
   }
 

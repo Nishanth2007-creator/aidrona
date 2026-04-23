@@ -104,7 +104,7 @@ class _VerifyDonorScreenState extends State<VerifyDonorScreen> {
                     duration: const Duration(milliseconds: 150),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
-                      color: sel ? AppTheme.danger.withOpacity(0.15) : AppTheme.surfaceElevated,
+                      color: sel ? AppTheme.danger.withValues(alpha: 0.15) : AppTheme.surfaceElevated,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: sel ? AppTheme.danger : Colors.transparent),
                     ),

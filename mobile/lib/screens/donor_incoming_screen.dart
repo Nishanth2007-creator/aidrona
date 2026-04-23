@@ -98,7 +98,7 @@ class _DonorIncomingScreenState extends State<DonorIncomingScreen> with SingleTi
                             scale: _pulse,
                             child: Container(
                               width: 100, height: 100,
-                              decoration: BoxDecoration(color: AppTheme.danger.withOpacity(0.15), shape: BoxShape.circle, border: Border.all(color: AppTheme.danger, width: 2)),
+                              decoration: BoxDecoration(color: AppTheme.danger.withValues(alpha: 0.15), shape: BoxShape.circle, border: Border.all(color: AppTheme.danger, width: 2)),
                               child: Center(child: Text(bloodType, style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w800, fontSize: 28, color: AppTheme.danger))),
                             ),
                           ),

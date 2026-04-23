@@ -8,7 +8,24 @@
     "dev": "nodemon backend/server.js",
     "test": "echo \"No tests yet\" && exit 0"
   },
-  "keywords": ["aidrona", "health", "emergency", "gemini"],
+  "keywords": [
+    "aidrona",
+    "health",
+    "emergency",
+    "gemini"
+  ],
   "author": "AiDrona Team",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/firestore": "^8.5.0",
+    "@google-cloud/vertexai": "^1.12.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "firebase-admin": "^13.8.0",
+    "node-cron": "^4.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
 }

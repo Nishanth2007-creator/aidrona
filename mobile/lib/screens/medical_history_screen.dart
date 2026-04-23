@@ -14,6 +14,7 @@ class MedicalHistoryScreen extends StatefulWidget {
 class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
   List<dynamic> _history = [];
   bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -25,9 +26,9 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
     try {
       final uid = context.read<AuthService>().uid!;
       final data = await context.read<ApiService>().getMedicalHistory(uid);
-      setState(() { _history = data; _loading = false; });
-    } catch (_) {
-      setState(() => _loading = false);
+      setState(() { _history = data; _loading = false; _error = null; });
+    } catch (e) {
+      setState(() { _loading = false; _error = e.toString(); });
     }
   }
 
@@ -37,8 +38,8 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
       appBar: AppBar(title: const Text('Medical History')),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
-          : _history.isEmpty
-              ? _buildEmpty()
+          : _error != null || _history.isEmpty
+              ? _buildEmptyOrError()
               : ListView.separated(
                   padding: const EdgeInsets.all(20),
                   itemCount: _history.length,
@@ -48,16 +49,39 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
     );
   }
 
+  Widget _buildEmptyOrError() {
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 60, color: AppTheme.danger),
+            const SizedBox(height: 16),
+            const Text('Failed to load medical history', style: TextStyle(fontFamily: 'Inter', color: AppTheme.onSurface, fontSize: 16)),
+            const SizedBox(height: 8),
+            Text(_error!, style: const TextStyle(fontFamily: 'Inter', color: AppTheme.onSurfaceMuted, fontSize: 13), textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _load,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+    return _buildEmpty();
+  }
+
   Widget _buildEmpty() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.medical_information_outlined, size: 60, color: AppTheme.onSurfaceMuted),
-          const SizedBox(height: 16),
-          const Text('No medical records yet', style: TextStyle(fontFamily: 'Inter', color: AppTheme.onSurfaceMuted, fontSize: 16)),
-          const SizedBox(height: 8),
-          const Text('Visit a doctor and scan your QR code to add a record', style: TextStyle(fontFamily: 'Inter', color: AppTheme.onSurfaceMuted, fontSize: 13), textAlign: TextAlign.center),
+          Icon(Icons.medical_information_outlined, size: 60, color: AppTheme.onSurfaceMuted),
+          SizedBox(height: 16),
+          Text('No medical records yet', style: TextStyle(fontFamily: 'Inter', color: AppTheme.onSurfaceMuted, fontSize: 16)),
+          SizedBox(height: 8),
+          Text('Visit a doctor and scan your QR code to add a record', style: TextStyle(fontFamily: 'Inter', color: AppTheme.onSurfaceMuted, fontSize: 13), textAlign: TextAlign.center),
         ],
       ),
     );
@@ -91,14 +115,14 @@ class _HistoryCardState extends State<_HistoryCard> {
         decoration: BoxDecoration(
           color: AppTheme.surfaceCard,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: eligibilityChanged ? AppTheme.primary.withOpacity(0.5) : Colors.transparent),
+          border: Border.all(color: eligibilityChanged ? AppTheme.primary.withValues(alpha: 0.5) : Colors.transparent),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Container(width: 40, height: 40, decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.local_hospital_outlined, color: AppTheme.primary, size: 20)),
+                Container(width: 40, height: 40, decoration: BoxDecoration(color: AppTheme.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.local_hospital_outlined, color: AppTheme.primary, size: 20)),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -124,7 +148,7 @@ class _HistoryCardState extends State<_HistoryCard> {
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: AppTheme.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                 child: const Text('⚡ Eligibility status changed', style: TextStyle(fontFamily: 'Inter', color: AppTheme.primary, fontSize: 12)),
               ),
             ],

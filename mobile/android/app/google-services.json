@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "405252637540",
+    "project_id": "aidrona",
+    "storage_bucket": "aidrona.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:405252637540:android:ecb92a56862d0e0b277071",
+        "android_client_info": {
+          "package_name": "com.example.aidrona"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDB0keCjPD_KGDd7NB9a7ZMxys-A0-1gkc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

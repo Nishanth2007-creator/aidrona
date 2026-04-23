@@ -31,9 +31,9 @@ class _RequestBloodScreenState extends State<RequestBloodScreen> {
   final SpeechToText _speech = SpeechToText();
   final List<String> _bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
   final List<_UrgencyOption> _urgencies = [
-    _UrgencyOption('critical', 'Critical', AppTheme.danger),
-    _UrgencyOption('urgent', 'Urgent', AppTheme.amber),
-    _UrgencyOption('moderate', 'Moderate', AppTheme.teal),
+    const _UrgencyOption('critical', 'Critical', AppTheme.danger),
+    const _UrgencyOption('urgent', 'Urgent', AppTheme.amber),
+    const _UrgencyOption('moderate', 'Moderate', AppTheme.teal),
   ];
 
   @override
@@ -46,8 +46,14 @@ class _RequestBloodScreenState extends State<RequestBloodScreen> {
 
   Future<void> _getLocation() async {
     try {
-      _position = await Geolocator.getCurrentPosition();
-      setState(() {});
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+        _position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+        if (mounted) setState(() {});
+      }
     } catch (_) {}
   }
 
@@ -78,7 +84,9 @@ class _RequestBloodScreenState extends State<RequestBloodScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final uid = context.read<AuthService>().uid!;
-      final result = await context.read<ApiService>().submitBloodRequest({
+      final apiService = context.read<ApiService>();
+      final crisisProvider = context.read<CrisisProvider>();
+      final result = await apiService.submitBloodRequest({
         'requester_id': uid,
         'blood_type': _bloodType,
         'urgency': _urgency,
@@ -87,7 +95,8 @@ class _RequestBloodScreenState extends State<RequestBloodScreen> {
         'radius_km': _radius,
       });
 
-      context.read<CrisisProvider>().setCrisis(
+      if (!mounted) return;
+      crisisProvider.setCrisis(
         crisisId: result['crisis_id'] ?? '',
         triage: result['triage'] ?? {},
         donorsNotified: result['donors_notified'] ?? 0,
@@ -126,7 +135,7 @@ class _RequestBloodScreenState extends State<RequestBloodScreen> {
                   decoration: BoxDecoration(
                     color: sel ? AppTheme.danger : AppTheme.surfaceElevated,
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: sel ? [BoxShadow(color: AppTheme.danger.withOpacity(0.4), blurRadius: 12)] : [],
+                    boxShadow: sel ? [BoxShadow(color: AppTheme.danger.withValues(alpha: 0.4), blurRadius: 12)] : [],
                   ),
                   child: Text(bt, style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, color: sel ? Colors.white : AppTheme.onSurfaceMuted)),
                 ),
@@ -147,7 +156,7 @@ class _RequestBloodScreenState extends State<RequestBloodScreen> {
                     margin: const EdgeInsets.only(right: 8),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
-                      color: sel ? u.color.withOpacity(0.2) : AppTheme.surfaceElevated,
+                      color: sel ? u.color.withValues(alpha: 0.2) : AppTheme.surfaceElevated,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: sel ? u.color : Colors.transparent, width: 2),
                     ),
@@ -186,7 +195,7 @@ class _RequestBloodScreenState extends State<RequestBloodScreen> {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: _listening ? AppTheme.primary.withOpacity(0.2) : AppTheme.surfaceElevated, borderRadius: BorderRadius.circular(8)),
+                    decoration: BoxDecoration(color: _listening ? AppTheme.primary.withValues(alpha: 0.2) : AppTheme.surfaceElevated, borderRadius: BorderRadius.circular(8)),
                     child: Icon(Icons.mic_rounded, color: _listening ? AppTheme.primary : AppTheme.onSurfaceMuted, size: 20),
                   ),
                 ),
@@ -212,7 +221,7 @@ class _RequestBloodScreenState extends State<RequestBloodScreen> {
           const SizedBox(height: 40),
           Container(
             width: 80, height: 80,
-            decoration: BoxDecoration(color: AppTheme.teal.withOpacity(0.15), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: AppTheme.teal.withValues(alpha: 0.15), shape: BoxShape.circle),
             child: const Icon(Icons.check_circle_rounded, color: AppTheme.teal, size: 48),
           ),
           const SizedBox(height: 20),
@@ -256,7 +265,7 @@ class _RequestBloodScreenState extends State<RequestBloodScreen> {
   Widget _statCard(String label, String value, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: color.withOpacity(0.3))),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: color.withValues(alpha: 0.3))),
       child: Row(
         children: [
           Text(label, style: const TextStyle(fontFamily: 'Inter', color: AppTheme.onSurfaceMuted, fontSize: 14)),

@@ -46,7 +46,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen>
       ),
       body: TabBarView(
         controller: _tab,
-        children: [
+        children: const [
           _RequestsList(type: 'sent'),
           _RequestsList(type: 'received'),
         ],
@@ -148,7 +148,7 @@ class _RequestsListState extends State<_RequestsList>
           children: [
             const Icon(Icons.error_outline, color: AppTheme.danger, size: 48),
             const SizedBox(height: 12),
-            Text('Failed to load', style: const TextStyle(color: AppTheme.onSurfaceMuted)),
+            const Text('Failed to load', style: TextStyle(color: AppTheme.onSurfaceMuted)),
             const SizedBox(height: 12),
             ElevatedButton(onPressed: () { setState(() { _loading = true; _error = null; }); _load(); }, child: const Text('Retry')),
           ],

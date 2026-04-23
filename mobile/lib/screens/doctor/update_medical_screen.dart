@@ -22,8 +22,8 @@ class _UpdateMedicalScreenState extends State<UpdateMedicalScreen> {
   final _medCtrl = TextEditingController();
   final _condCtrl = TextEditingController();
 
-  List<String> _medications = [];
-  List<String> _conditions = [];
+  final List<String> _medications = [];
+  final List<String> _conditions = [];
   bool _loading = false;
   String _doctorRegId = 'DR-TEMP';
   Map<String, dynamic>? _previewScore;
@@ -141,8 +141,8 @@ class _UpdateMedicalScreenState extends State<UpdateMedicalScreen> {
               label: Text(m, style: const TextStyle(fontFamily: 'Inter', fontSize: 12)),
               deleteIcon: const Icon(Icons.close, size: 14),
               onDeleted: () => setState(() => items.remove(m)),
-              backgroundColor: color.withOpacity(0.1),
-              side: BorderSide(color: color.withOpacity(0.3)),
+              backgroundColor: color.withValues(alpha: 0.1),
+              side: BorderSide(color: color.withValues(alpha: 0.3)),
             )),
             ActionChip(
               label: const Text('+ Add', style: TextStyle(fontFamily: 'Inter', fontSize: 12)),

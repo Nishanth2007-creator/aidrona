@@ -45,7 +45,7 @@ class _RequestCardState extends State<RequestCard> {
               children: [
                 Container(
                   width: 44, height: 44,
-                  decoration: BoxDecoration(color: AppTheme.danger.withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(color: AppTheme.danger.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
                   child: Center(child: Text(widget.data['blood_type'] ?? '?', style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, color: AppTheme.danger, fontSize: 14))),
                 ),
                 const SizedBox(width: 12),
@@ -58,7 +58,7 @@ class _RequestCardState extends State<RequestCard> {
                 )),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(color: _statusColor.withOpacity(0.12), borderRadius: BorderRadius.circular(20)),
+                  decoration: BoxDecoration(color: _statusColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
                   child: Text(_statusLabel, style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, color: _statusColor, fontSize: 12)),
                 ),
               ],
