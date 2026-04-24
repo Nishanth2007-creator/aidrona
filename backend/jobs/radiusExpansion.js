@@ -2,7 +2,7 @@ const cron = require('node-cron');
 const {
   getOpenCrisisRequests, updateCrisisRequest,
   getDonorsWithinRadius, createDonorResponse, createNotification,
-  getNearestBloodBank,
+  getNearestBloodBank, getDonorResponsesByCrisis,
 } = require('../db/firestore');
 const { rankDonors } = require('../ai/gemini');
 
@@ -33,7 +33,12 @@ cron.schedule('*/2 * * * *', async () => {
             urgency_score: crisis.severity_score || 7,
             donor_candidates: donors.slice(0, 20),
           });
+          const existingResponses = await getDonorResponsesByCrisis(crisis.id);
+          const alreadyNotified = new Set(existingResponses.map((r) => r.donor_id));
+
           for (const donor_id of (ranking.ranked_donor_ids || []).slice(0, 5)) {
+            if (alreadyNotified.has(donor_id)) continue;
+
             await createDonorResponse({ crisis_id: crisis.id, donor_id });
             await createNotification({
               user_id: donor_id,

@@ -13,6 +13,7 @@ if (!admin.apps.length) {
 
 const { getFirestore, GeoPoint, FieldValue, Timestamp } = require('firebase-admin/firestore');
 const db = getFirestore('default');
+db.settings({ ignoreUndefinedProperties: true }); // ✅ Fix: Ignore undefined fields to prevent crashes
 const Firestore = { Timestamp }; 
 
 // ─── USERS ───────────────────────────────────────────────────
@@ -181,6 +182,14 @@ async function getPendingResponsesByCrisis(crisis_id) {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+async function getDonorResponsesByCrisis(crisis_id) {
+  const snap = await db
+    .collection('donor_responses')
+    .where('crisis_id', '==', crisis_id)
+    .get();
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
 // ─── BLOOD BANKS ─────────────────────────────────────────────
 async function getNearestBloodBank(lat, lng, blood_type) {
   const snap = await db.collection('blood_banks').get();
@@ -310,7 +319,7 @@ module.exports = {
   addMedicalHistoryLog, getMedicalHistory,
   createCrisisRequest, getCrisisRequest, updateCrisisRequest, getOpenCrisisRequests,
   getCrisisRequestsByUser, getDonorResponsesByUser,
-  createDonorResponse, updateDonorResponse, getDonorResponseByCrisisAndDonor, getPendingResponsesByCrisis,
+  createDonorResponse, updateDonorResponse, getDonorResponseByCrisisAndDonor, getPendingResponsesByCrisis, getDonorResponsesByCrisis,
   getNearestBloodBank, getAllBloodBanks, updateBloodBank,
   createNotification, getUserNotifications, markNotificationsRead,
   getAllUsers, getDoctor,
