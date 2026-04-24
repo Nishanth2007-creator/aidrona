@@ -1,9 +1,19 @@
-const { Firestore, GeoPoint, FieldValue } = require('@google-cloud/firestore');
+const admin = require('firebase-admin');
+const path = require('path');
 
-const db = new Firestore({
-  projectId: process.env.GCP_PROJECT_ID || 'aidrona-prod',
-  databaseId: '(default)',
-});
+const keyFile = process.env.GOOGLE_APPLICATION_CREDENTIALS 
+  ? path.resolve(__dirname, '..', process.env.GOOGLE_APPLICATION_CREDENTIALS.replace(/"/g, '')) 
+  : path.join(__dirname, '..', 'service-account-key.json');
+
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(require(keyFile))
+  });
+}
+
+const { getFirestore, GeoPoint, FieldValue, Timestamp } = require('firebase-admin/firestore');
+const db = getFirestore('default');
+const Firestore = { Timestamp }; 
 
 // ─── USERS ───────────────────────────────────────────────────
 async function createUser(uid, data) {

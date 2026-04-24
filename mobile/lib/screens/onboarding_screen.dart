@@ -110,7 +110,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
         }
       } catch (e) {
-        print('GPS Error: $e');
+        debugPrint('GPS Error: $e');
       }
 
       await api.register({

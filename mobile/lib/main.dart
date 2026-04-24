@@ -28,16 +28,21 @@ import 'screens/admin/admin_login_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/main_shell.dart';
+import 'package:aidrona/firebase_options.dart';
 
 // Background/terminated message handler (must be top-level)
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // Pre-cache Inter font so there's zero jank on first render
   await GoogleFonts.pendingFonts([GoogleFonts.inter()]);
@@ -129,7 +134,7 @@ CustomTransitionPage<void> _slideFade(Widget child, GoRouterState state) {
 
 // ── Router ───────────────────────────────────────────────────────
 final GoRouter _router = GoRouter(
-  initialLocation: '/splash',
+  initialLocation: '/doctor/login',
   routes: [
     // ── Splash & Role Selection ──
     GoRoute(

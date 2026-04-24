@@ -99,7 +99,8 @@ router.post('/doctor-verify', async (req, res) => {
     }
     return res.json({ verified: true, doctor: doctor || { reg_id, name: 'Verified Doctor' } });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    console.error('doctor-verify error:', err);
+    return res.status(500).json({ error: 'Firestore error: ' + err.message });
   }
 });
 

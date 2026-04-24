@@ -82,10 +82,8 @@ class _RequestBloodScreenState extends State<RequestBloodScreen> {
       }
 
       _position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 15),
-        ),
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 15),
       );
       if (mounted) setState(() {});
     } catch (e) {
@@ -420,10 +418,11 @@ class _RequestBloodScreenState extends State<RequestBloodScreen> {
                   child: OutlinedButton(
                 onPressed: () {
                   final crisis = context.read<CrisisProvider>();
-                  if (crisis.activeCrisisId != null)
+                  if (crisis.activeCrisisId != null) {
                     context
                         .read<ApiService>()
                         .extendRadius(crisis.activeCrisisId!, 10);
+                  }
                 },
                 style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.primary,
@@ -441,9 +440,10 @@ class _RequestBloodScreenState extends State<RequestBloodScreen> {
                 onPressed: () {
                   final crisis = context.read<CrisisProvider>();
                   final pos = _position;
-                  if (crisis.activeCrisisId != null && pos != null)
+                  if (crisis.activeCrisisId != null && pos != null) {
                     context.read<ApiService>().openToStrangers(
                         crisis.activeCrisisId!, pos.latitude, pos.longitude);
+                  }
                 },
                 label: 'Open to All',
                 color: AppTheme.primary,

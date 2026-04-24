@@ -7,8 +7,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   // Use 10.0.2.2 for Android emulator (maps to host localhost),
   // change to your server IP/hostname for a real device or production.
-  static const String _baseUrl =
-      kDebugMode ? 'http://10.0.2.2:8080/api' : 'https://api.aidrona.app/api';
+  static String get _baseUrl {
+    if (kDebugMode) {
+      if (kIsWeb) {
+        return 'http://localhost:8085/api';
+      }
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        return 'http://10.0.2.2:8085/api'; // Android Emulator alias
+      }
+      return 'http://localhost:8085/api'; // Windows / iOS Simulator
+    }
+    return 'https://api.aidrona.app/api';
+  }
 
   static const Duration _timeout = Duration(seconds: 10);
 
