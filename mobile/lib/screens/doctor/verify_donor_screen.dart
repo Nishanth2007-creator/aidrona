@@ -37,6 +37,33 @@ class _VerifyDonorScreenState extends State<VerifyDonorScreen> {
   }
 
   Future<void> _verdict(String verdict) async {
+    if (verdict == 'unfit' && _reason == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a reason before marking unfit')),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppTheme.surfaceCard,
+        title: Text(verdict == 'fit' ? 'Confirm Donor Fit' : 'Confirm Donor Unfit'),
+        content: Text(verdict == 'unfit'
+          ? 'This will re-trigger donor search and penalise this donor\'s fitness score.'
+          : 'This will confirm the donation and notify the requester.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: verdict == 'fit' ? AppTheme.teal : AppTheme.danger),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
     setState(() => _submitting = true);
     try {
       await context.read<ApiService>().verifyDonor({
@@ -81,7 +108,7 @@ class _VerifyDonorScreenState extends State<VerifyDonorScreen> {
                   Row(children: [
                     const Text('Fitness Score', style: TextStyle(fontFamily: 'Inter', color: AppTheme.onSurfaceMuted)),
                     const Spacer(),
-                    Text('$score / 100', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 22, color: double.tryParse(score.toString())! >= 60 ? AppTheme.teal : AppTheme.amber)),
+                    Text('$score / 100', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 22, color: (double.tryParse(score.toString()) ?? 0) >= 60 ? AppTheme.teal : AppTheme.amber)),
                   ]),
                   const SizedBox(height: 8),
                   LinearProgressIndicator(value: (double.tryParse(score.toString()) ?? 0) / 100, backgroundColor: AppTheme.surfaceElevated, color: AppTheme.primary, borderRadius: BorderRadius.circular(4)),

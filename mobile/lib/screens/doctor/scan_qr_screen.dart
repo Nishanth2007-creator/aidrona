@@ -6,7 +6,8 @@ import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 
 class ScanQrScreen extends StatefulWidget {
-  const ScanQrScreen({super.key});
+  final String? crisisId;
+  const ScanQrScreen({super.key, this.crisisId});
 
   @override
   State<ScanQrScreen> createState() => _ScanQrScreenState();
@@ -125,6 +126,11 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
           ),
           const SizedBox(height: 16),
           _infoTile('Hemoglobin', '${medical['hemoglobin'] ?? '—'} g/dL'),
+          _infoTile('Blood Pressure', medical['blood_pressure'] ?? '—'),
+          _infoTile('Last Visit', medical['last_visit_date'] ?? '—'),
+          _infoTile('Medications', (medical['medications'] as List?)?.join(', ') ?? 'None'),
+          _infoTile('Conditions', (medical['conditions'] as List?)?.join(', ') ?? 'None'),
+          _infoTile('Donation Count', '${donor['donation_count'] ?? 0}'),
           _infoTile('Eligible', donor['is_eligible'] == true ? 'Yes ✓' : 'No ✗'),
           const SizedBox(height: 24),
           const Text('Actions', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 15, color: AppTheme.onSurface)),
@@ -133,7 +139,7 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
             children: [
               Expanded(child: _actionBtn('Update Record', Icons.edit_note_rounded, AppTheme.primary, () => context.push('/doctor/update/${user['id']}'))),
               const SizedBox(width: 10),
-              Expanded(child: _actionBtn('Verify Donor', Icons.verified_rounded, AppTheme.teal, () => context.push('/doctor/verify/${user['id']}?crisis_id='))),
+              Expanded(child: _actionBtn('Verify Donor', Icons.verified_rounded, AppTheme.teal, () => context.push('/doctor/verify/${user['id']}?crisis_id=${widget.crisisId ?? ''}'))),
             ],
           ),
           const SizedBox(height: 10),

@@ -17,7 +17,7 @@ router.post('/register', async (req, res) => {
 
     await createUser(uid, { 
       name, 
-      phone, 
+      phone_number: phone, // Store as phone_number for contact matching
       blood_type, 
       lat: lat || 0, 
       lng: lng || 0, 

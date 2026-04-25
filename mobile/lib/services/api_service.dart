@@ -83,11 +83,13 @@ class ApiService {
     return _decodeMap(res);
   }
 
-  Future<Map<String, dynamic>> verifyDoctor(String regId) async {
+  Future<Map<String, dynamic>> verifyDoctor(String regId, {String? phone}) async {
+    final body = {'reg_id': regId};
+    if (phone != null && phone.isNotEmpty) body['phone'] = phone;
     final res = await http.post(
       Uri.parse('$_baseUrl/auth/doctor-verify'),
       headers: await _getHeaders(),
-      body: jsonEncode({'reg_id': regId}),
+      body: jsonEncode(body),
     ).timeout(_timeout);
     return _decodeMap(res);
   }
@@ -197,7 +199,7 @@ class ApiService {
     final res = await http.get(
       Uri.parse('$_baseUrl/medical/patient/$uid/summary'),
       headers: await _getHeaders(),
-    ).timeout(_timeout);
+    ).timeout(const Duration(seconds: 30));
     return _decodeMap(res);
   }
 
@@ -205,7 +207,7 @@ class ApiService {
     final res = await http.get(
       Uri.parse('$_baseUrl/medical/history/$uid'),
       headers: await _getHeaders(),
-    ).timeout(_timeout);
+    ).timeout(const Duration(seconds: 30));
     return _decodeList(res);
   }
 

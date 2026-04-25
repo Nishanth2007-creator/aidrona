@@ -311,6 +311,50 @@ async function getDoctor(regId) {
   return { id: snap.docs[0].id, ...snap.docs[0].data() };
 }
 
+// ─── CONTACTS MATCHING ─────────────────────────────────────────
+async function getDonorsByPhoneNumbers(phoneNumbers, requested_blood_type) {
+  if (!phoneNumbers || phoneNumbers.length === 0) return [];
+
+  // Firestore 'in' query supports max 30 at a time
+  const chunks = [];
+  for (let i = 0; i < phoneNumbers.length; i += 30) {
+    chunks.push(phoneNumbers.slice(i, i + 30));
+  }
+
+  const results = [];
+  for (const chunk of chunks) {
+    const snapshot = await db.collection('users')
+      .where('phone_number', 'in', chunk)
+      .where('role', '==', 'donor') // only users with donor role
+      .get();
+
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      // Check blood compatibility (Universal Donor logic or exact match)
+      if (isCompatible(data.blood_type, requested_blood_type)) {
+        results.push({ donor_id: doc.id, ...data });
+      }
+    });
+  }
+  return results;
+}
+
+// Blood type compatibility helper (Donor -> Recipient)
+function isCompatible(donorType, requestedType) {
+  if (!donorType || !requestedType) return false;
+  const compatibility = {
+    'O-': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'],
+    'O+': ['O+', 'A+', 'B+', 'AB+'],
+    'A-': ['A-', 'A+', 'AB-', 'AB+'],
+    'A+': ['A+', 'AB+'],
+    'B-': ['B-', 'B+', 'AB-', 'AB+'],
+    'B+': ['B+', 'AB+'],
+    'AB-': ['AB-', 'AB+'],
+    'AB+': ['AB+'],
+  };
+  return compatibility[donorType]?.includes(requestedType) ?? false;
+}
+
 module.exports = {
   db,
   createUser, getUser, updateUser,
@@ -323,4 +367,5 @@ module.exports = {
   getNearestBloodBank, getAllBloodBanks, updateBloodBank,
   createNotification, getUserNotifications, markNotificationsRead,
   getAllUsers, getDoctor,
+  getDonorsByPhoneNumbers,
 };

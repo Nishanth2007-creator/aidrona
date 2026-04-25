@@ -1,9 +1,14 @@
+import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:gal/gal.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import '../providers/user_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/eligibility_badge.dart';
@@ -46,49 +51,32 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
       ));
       return;
     }
-    // Show preview dialog with save capability
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        backgroundColor: AppTheme.surfaceCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('QR Code Preview',
-                  style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.onSurface,
-                      fontSize: 18)),
-              const SizedBox(height: 16),
-              Container(
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16)),
-                padding: const EdgeInsets.all(16),
-                child: Image.memory(bytes, width: 220, height: 220),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Long press the image above to save it, or share it from the main screen.',
-                style: TextStyle(
-                    fontFamily: 'Inter',
-                    color: AppTheme.onSurfaceMuted,
-                    fontSize: 13),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Close')),
-            ],
-          ),
-        ),
-      ),
-    );
+    try {
+      final user = context.read<UserProvider>();
+      final hasAccess = await Gal.hasAccess();
+      if (!hasAccess) {
+        final request = await Gal.requestAccess();
+        if (!request) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Storage permission is required to save QR code'),
+            backgroundColor: AppTheme.danger,
+          ));
+          return;
+        }
+      }
+      await Gal.putImageBytes(bytes, name: 'aidrona_qr_${user.uid}');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('QR Code saved to gallery'),
+        backgroundColor: AppTheme.teal,
+      ));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Failed to save QR Code to gallery'),
+        backgroundColor: AppTheme.danger,
+      ));
+    }
   }
 
   Future<void> _shareQr(UserProvider user) async {
@@ -101,22 +89,24 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
       ));
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(
-          'Share: aidrona://user/${user.uid}?bt=${user.bloodType}'),
-      backgroundColor: AppTheme.primary,
-      action: SnackBarAction(
-        label: 'Copy',
-        textColor: Colors.white,
-        onPressed: () {},
-      ),
-    ));
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/my_qr.png');
+      await file.writeAsBytes(bytes);
+      await Share.shareXFiles([XFile(file.path)], text: 'My AiDrona Blood Donor QR');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Failed to share QR Code'),
+        backgroundColor: AppTheme.danger,
+      ));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final user = context.watch<UserProvider>();
-    final qrData = 'aidrona://user/${user.uid}?bt=${user.bloodType}';
+    final token = base64Encode(utf8.encode('${user.uid}:${DateTime.now().millisecondsSinceEpoch ~/ 300000}'));
+    final qrData = 'aidrona://user/${user.uid}?token=$token';
 
     return Scaffold(
       appBar: AppBar(

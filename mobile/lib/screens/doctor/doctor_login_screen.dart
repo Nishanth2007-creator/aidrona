@@ -26,8 +26,23 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _checkExistingSession();
+  }
+
+  Future<void> _checkExistingSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString('doctor_reg_id');
+    if (saved != null && saved.isNotEmpty && mounted) {
+      context.go('/doctor/scan');
+    }
+  }
+
   Future<void> _verify() async {
     final regId = _regIdCtrl.text.trim();
+    final phone = _phoneCtrl.text.trim();
     if (regId.isEmpty) {
       setState(() => _error = 'Please enter your registration ID');
       return;
@@ -35,7 +50,7 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final result =
-          await context.read<ApiService>().verifyDoctor(regId);
+          await context.read<ApiService>().verifyDoctor(regId, phone: phone);
       if (result['verified'] == true) {
         // Persist reg_id for use in medical update screen
         final prefs = await SharedPreferences.getInstance();

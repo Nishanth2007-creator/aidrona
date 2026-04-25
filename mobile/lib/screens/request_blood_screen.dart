@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../providers/user_provider.dart';
@@ -113,6 +114,27 @@ class _RequestBloodScreenState extends State<RequestBloodScreen> {
     setState(() => _listening = false);
   }
 
+  Future<List<String>> _getContactPhoneNumbers() async {
+    try {
+      if (!await FlutterContacts.requestPermission()) return [];
+
+      final contacts = await FlutterContacts.getContacts(withProperties: true);
+      final List<String> numbers = [];
+      
+      for (var contact in contacts) {
+        for (var phone in contact.phones) {
+          // Normalize: remove spaces, dashes, parens
+          final clean = phone.number.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+          if (clean.isNotEmpty) numbers.add(clean);
+        }
+      }
+      return numbers.toSet().toList(); // Unique numbers
+    } catch (e) {
+      debugPrint('Error getting contacts: $e');
+      return [];
+    }
+  }
+
   Future<void> _submit() async {
     if (_position == null) {
       setState(
@@ -127,6 +149,10 @@ class _RequestBloodScreenState extends State<RequestBloodScreen> {
       final uid = context.read<AuthService>().uid!;
       final apiService = context.read<ApiService>();
       final crisisProvider = context.read<CrisisProvider>();
+
+      // Fetch contacts for Stage 1 matching
+      final contactNumbers = await _getContactPhoneNumbers();
+
       final result = await apiService.submitBloodRequest({
         'requester_id': uid,
         'blood_type': _bloodType,
@@ -134,6 +160,7 @@ class _RequestBloodScreenState extends State<RequestBloodScreen> {
         'lat': _position!.latitude,
         'lng': _position!.longitude,
         'radius_km': _radius,
+        'contact_phone_numbers': contactNumbers,
       });
 
       if (!mounted) return;

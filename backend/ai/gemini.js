@@ -3,9 +3,18 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); 
 
-async function callGemini(prompt, type = 'triage') {
+async function callGemini(prompt, type = 'triage', imageBase64 = null) {
   try {
-    const result = await model.generateContent(prompt);
+    const parts = [{ text: prompt }];
+    if (imageBase64) {
+      parts.push({
+        inlineData: {
+          data: imageBase64,
+          mimeType: "image/jpeg"
+        }
+      });
+    }
+    const result = await model.generateContent(parts);
     const text = result.response.text().trim();
     const clean = text.replace(/^```json\n?/, '').replace(/\n?```$/, '');
     return JSON.parse(clean);
@@ -14,7 +23,7 @@ async function callGemini(prompt, type = 'triage') {
     // Safety Fallbacks so Firestore never gets 'undefined'
     if (type === 'triage') return { severity_score: 7, recommended_radius_km: 10, estimated_response_minutes: 20, triage_reasoning: "Safe fallback due to API error" };
     if (type === 'ranking') return { ranked_donor_ids: [], expand_if_no_response_mins: 5, escalate_to_bank: false };
-    if (type === 'fitness') return { fitness_score: 80, is_eligible: true, disqualifiers_found: [], score_reasoning: "Safe fallback" };
+    if (type === 'fitness') return { fitness_score: 80, is_eligible: true, disqualifiers_found: [], score_reasoning: "Safe fallback", extracted_hemoglobin: 12.0, extracted_medications: [], extracted_conditions: [] };
     return {};
   }
 }
@@ -47,17 +56,22 @@ Respond with exactly: { "ranked_donor_ids": ["id1", "id2", ...], "expand_if_no_r
   return await callGemini(prompt, 'ranking');
 }
 
-async function evaluateDonorFitness({ medical_history, last_donated_days_ago, weight_kg, age }) {
+async function evaluateDonorFitness({ base64_image, last_donation_days, donation_count, doctor_unfit_count }) {
   const prompt = `You are a medical AI. Return ONLY valid JSON.
-Evaluate this blood donor:
-- Age: ${age}
-- Weight: ${weight_kg} kg
-- Last donated: ${last_donated_days_ago} days ago
-- Medical history: ${JSON.stringify(medical_history)}
+Evaluate this blood donor's medical report from the provided image.
+Extract the following information from the medical report:
+- Hemoglobin level
+- Medications currently taken
+- Any disqualifying conditions
 
-Respond with exactly: { "fitness_score": 85, "is_eligible": true, "disqualifiers_found": [], "score_reasoning": "Healthy" }`;
+Consider:
+- Last donated: ${last_donation_days} days ago
+- Total donations: ${donation_count}
+- Previous unfit evaluations by doctors: ${doctor_unfit_count}
 
-  return await callGemini(prompt, 'fitness');
+Respond with exactly: { "fitness_score": 85, "is_eligible": true, "disqualifiers_found": ["none"], "score_reasoning": "Healthy", "extracted_hemoglobin": 14.5, "extracted_medications": [], "extracted_conditions": [] }`;
+
+  return await callGemini(prompt, 'fitness', base64_image);
 }
 
 async function checkDisqualifiers({ medications, conditions, recent_travel }) {

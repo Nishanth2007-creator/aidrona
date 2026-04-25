@@ -9,34 +9,33 @@ const { evaluateDonorFitness, checkDisqualifiers } = require('../ai/gemini');
 // POST /api/medical/upload — Patient uploads initial doctor-verified report
 router.post('/upload', async (req, res) => {
   try {
-    const { user_id, hemoglobin, disqualifiers, medications, doctor_name, conditions } = req.body;
-    if (!user_id || hemoglobin == null) return res.status(400).json({ error: 'user_id, hemoglobin required' });
+    const { patient_id, hospital, base64_image } = req.body;
+    if (!patient_id || !base64_image) return res.status(400).json({ error: 'patient_id and base64_image required' });
 
-    const donorProfile = await getDonorProfile(user_id);
+    const donorProfile = await getDonorProfile(patient_id);
     const prevScore = donorProfile?.fitness_score ?? 0;
 
     // Evaluate fitness via Gemini
     const fitness = await evaluateDonorFitness({
-      hemoglobin,
+      base64_image,
       last_donation_days: donorProfile?.last_donation_date
         ? Math.floor((Date.now() - donorProfile.last_donation_date.toDate().getTime()) / 86400000)
         : 999,
       donation_count: donorProfile?.donation_count ?? 0,
-      conditions: conditions || disqualifiers || [],
-      medications: medications || [],
       doctor_unfit_count: donorProfile?.doctor_unfit_count ?? 0,
     });
 
     // Save medical record (server-side Admin SDK only)
-    await setMedicalRecord(user_id, {
-      hemoglobin,
+    await setMedicalRecord(patient_id, {
+      hemoglobin: fitness.extracted_hemoglobin || 12.0,
       disqualifiers: fitness.disqualifiers_found || [],
-      medications: medications || [],
-      doctor_name: doctor_name || '',
+      conditions: fitness.extracted_conditions || [],
+      medications: fitness.extracted_medications || [],
+      doctor_name: hospital || 'AIdrona Upload',
     });
 
     // Update donor profile
-    await updateDonorProfile(user_id, {
+    await updateDonorProfile(patient_id, {
       fitness_score: fitness.fitness_score,
       is_eligible: fitness.is_eligible,
     });

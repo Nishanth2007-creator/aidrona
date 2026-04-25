@@ -10,15 +10,15 @@ const { triageBloodRequest, rankDonors } = require('../ai/gemini');
 // POST /api/request/blood — Submit a new blood request
 router.post('/blood', async (req, res) => {
   try {
-    const { requester_id, blood_type, urgency, lat, lng } = req.body;
+    const { requester_id, blood_type, urgency, lat, lng, contact_phone_numbers = [] } = req.body;
     if (!requester_id || !blood_type || !urgency || lat == null || lng == null) {
-      return res.status(400).json({ error: 'requester_id, blood_type, urgency, lat, lng required' });
+      return res.status(400).json({ error: 'Missing required fields' });
     }
 
     const hour = new Date().getHours();
     const time_of_day = hour < 6 ? 'night' : hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
 
-    // Step 1: Gemini triage
+    // Step 1: Gemini triage (with fallback)
     const triage = await triageBloodRequest({ blood_type, urgency, location: { lat, lng }, time_of_day });
 
     // Step 2: Create crisis in Firestore
@@ -30,42 +30,76 @@ router.post('/blood', async (req, res) => {
       lng,
       severity_score: triage.severity_score,
       current_radius_km: triage.recommended_radius_km || 5,
+      contacts_only: true, // starts contacts-first
     });
 
-    // Step 3: Find nearby donors
-    const donors = await getDonorsWithinRadius(lat, lng, triage.recommended_radius_km || 5, blood_type);
-
+    let donors_notified = 0;
+    let phase = 'contacts';
     let ranked = [];
-    if (donors.length > 0) {
-      const ranking = await rankDonors({
-        blood_type,
-        urgency_score: triage.severity_score,
-        donor_candidates: donors.slice(0, 20),
-      });
-      ranked = ranking.ranked_donor_ids || [];
 
-      // Create pending donor_response records + send push notifications
-      for (const donor_id of ranked.slice(0, 5)) {
-        await createDonorResponse({ crisis_id, donor_id });
-        const donorUser = await getUser(donor_id);
-        if (donorUser) {
+    // Step 3: CONTACTS FIRST — find app users who are in contacts
+    if (contact_phone_numbers.length > 0) {
+      const contactDonors = await getDonorsByPhoneNumbers(contact_phone_numbers, blood_type);
+
+      if (contactDonors.length > 0) {
+        const ranking = await rankDonors({
+          blood_type,
+          urgency_score: triage.severity_score,
+          donor_candidates: contactDonors.slice(0, 20),
+        });
+        ranked = ranking.ranked_donor_ids || [];
+
+        for (const donor_id of ranked.slice(0, 5)) {
+          await createDonorResponse({ crisis_id, donor_id });
           await createNotification({
             user_id: donor_id,
             type: 'donor_popup',
-            title: 'Blood Request Nearby',
-            body: `Someone needs ${blood_type} blood. Can you help?`,
+            title: 'Blood Request from your Contact',
+            body: `Someone in your contacts needs ${blood_type} blood urgently.`,
             deep_link: '/donor/incoming',
             crisis_id,
           });
+          donors_notified++;
         }
+      }
+    }
+
+    // Step 4: FALLBACK — if no contacts found, open to nearby strangers immediately
+    if (donors_notified === 0) {
+      phase = 'strangers';
+      const nearbyDonors = await getDonorsWithinRadius(lat, lng, triage.recommended_radius_km || 5, blood_type);
+      const strangers = nearbyDonors.filter(d => d.donor_id !== requester_id);
+
+      if (strangers.length > 0) {
+        const ranking = await rankDonors({
+          blood_type,
+          urgency_score: triage.severity_score,
+          donor_candidates: strangers.slice(0, 20),
+        });
+        ranked = ranking.ranked_donor_ids || [];
+
+        for (const donor_id of ranked.slice(0, 5)) {
+          await createDonorResponse({ crisis_id, donor_id });
+          await createNotification({
+            user_id: donor_id,
+            type: 'donor_popup',
+            title: 'Emergency Blood Request Nearby',
+            body: `Someone needs ${blood_type} blood urgently near you.`,
+            deep_link: '/donor/incoming',
+            crisis_id,
+          });
+          donors_notified++;
+        }
+        await updateCrisisRequest(crisis_id, { contacts_only: false });
       }
     }
 
     return res.status(201).json({
       crisis_id,
       triage,
-      donors_notified: ranked.length,
-      message: donors.length === 0 ? 'No donors found in radius' : 'Donors notified',
+      donors_notified,
+      phase,
+      message: donors_notified === 0 ? 'No donors found' : `Notified ${donors_notified} via ${phase}`,
     });
   } catch (err) {
     console.error('request/blood error:', err);

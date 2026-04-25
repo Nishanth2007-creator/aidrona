@@ -21,6 +21,8 @@ class _UpdateMedicalScreenState extends State<UpdateMedicalScreen> {
   final _bpCtrl = TextEditingController();
   final _medCtrl = TextEditingController();
   final _condCtrl = TextEditingController();
+  final _weightCtrl = TextEditingController();
+  final _travelCtrl = TextEditingController();
 
   final List<String> _medications = [];
   final List<String> _conditions = [];
@@ -32,6 +34,24 @@ class _UpdateMedicalScreenState extends State<UpdateMedicalScreen> {
   void initState() {
     super.initState();
     _loadDoctorId();
+    _loadExisting();
+  }
+
+  Future<void> _loadExisting() async {
+    try {
+      final data = await context.read<ApiService>().getPatientSummary(widget.patientId);
+      final medical = data['medical_record'] as Map? ?? {};
+      if (mounted) {
+        setState(() {
+          _hemoglobinCtrl.text = medical['hemoglobin']?.toString() ?? '';
+          _bpCtrl.text = medical['blood_pressure'] ?? '';
+          _diagnosisCtrl.text = medical['last_diagnosis'] ?? '';
+          if (medical['medications'] is List) {
+            _medications.addAll(List<String>.from(medical['medications']));
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadDoctorId() async {
@@ -48,6 +68,8 @@ class _UpdateMedicalScreenState extends State<UpdateMedicalScreen> {
     _bpCtrl.dispose();
     _medCtrl.dispose();
     _condCtrl.dispose();
+    _weightCtrl.dispose();
+    _travelCtrl.dispose();
     super.dispose();
   }
 
@@ -61,6 +83,8 @@ class _UpdateMedicalScreenState extends State<UpdateMedicalScreen> {
         'diagnosis': _diagnosisCtrl.text.trim(),
         'hemoglobin': double.tryParse(_hemoglobinCtrl.text) ?? 13.0,
         'blood_pressure': _bpCtrl.text.trim(),
+        'weight_kg': double.tryParse(_weightCtrl.text) ?? 60.0,
+        'recent_travel': _travelCtrl.text.trim().split(',').map((e) => e.trim()).toList(),
         'new_medications': _medications,
         'new_conditions': _conditions,
       });
@@ -106,6 +130,10 @@ class _UpdateMedicalScreenState extends State<UpdateMedicalScreen> {
               const SizedBox(width: 12),
               Expanded(child: _field(_bpCtrl, 'Blood Pressure', Icons.favorite_border_rounded)),
             ]),
+            const SizedBox(height: 14),
+            _field(_weightCtrl, 'Weight (kg)', Icons.monitor_weight_outlined, type: TextInputType.number),
+            const SizedBox(height: 14),
+            _field(_travelCtrl, 'Recent travel (countries)', Icons.flight_outlined),
             const SizedBox(height: 20),
             _chipSection('Medications', _medications, _medCtrl, AppTheme.danger),
             const SizedBox(height: 16),

@@ -134,7 +134,7 @@ CustomTransitionPage<void> _slideFade(Widget child, GoRouterState state) {
 
 // ── Router ───────────────────────────────────────────────────────
 final GoRouter _router = GoRouter(
-  initialLocation: '/doctor/login',
+  initialLocation: '/splash',
   routes: [
     // ── Splash & Role Selection ──
     GoRoute(
@@ -199,7 +199,12 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/doctor/scan',
-      pageBuilder: (ctx, state) => _slideFade(const ScanQrScreen(), state),
+      pageBuilder: (ctx, state) => _slideFade(
+        ScanQrScreen(
+          crisisId: state.uri.queryParameters['crisis_id'],
+        ),
+        state,
+      ),
     ),
     GoRoute(
       path: '/doctor/update/:patient_id',

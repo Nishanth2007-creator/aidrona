@@ -1,8 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../providers/user_provider.dart';
@@ -31,6 +35,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String? _verificationId;
   bool _loading = false;
   String? _error;
+  String? _base64Image;
 
   final List<String> _bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -90,9 +95,52 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _simulateUpload() async {
-    setState(() { _loading = true; });
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() { _uploadedDoc = true; _loading = false; });
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: AppTheme.surfaceCard,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined, color: AppTheme.primary),
+              title: const Text('Take Photo', style: TextStyle(fontFamily: 'Inter', color: AppTheme.onSurface)),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined, color: AppTheme.primary),
+              title: const Text('Choose from Gallery', style: TextStyle(fontFamily: 'Inter', color: AppTheme.onSurface)),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    if (source == ImageSource.camera) {
+      final status = await Permission.camera.request();
+      if (status.isDenied || status.isPermanentlyDenied) {
+        setState(() => _error = 'Camera permission is required');
+        return;
+      }
+    }
+
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: source);
+    
+    if (image != null) {
+      setState(() { _loading = true; _error = null; });
+      try {
+        final bytes = await File(image.path).readAsBytes();
+        _base64Image = base64Encode(bytes);
+        setState(() { _uploadedDoc = true; _loading = false; });
+      } catch (e) {
+        setState(() { _error = 'Failed to process image'; _loading = false; });
+      }
+    }
   }
 
   Future<void> _register() async {
@@ -126,12 +174,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       });
       
       // If doc uploaded, we should ideally call /medical/upload, simulating AI parsing
-      if (_uploadedDoc && auth.uid != null) {
+      if (_uploadedDoc && auth.uid != null && _base64Image != null) {
         try {
           await api.uploadMedicalRecord({
             'patient_id': auth.uid,
             'hospital': 'AIdrona Upload',
-            'base64_image': 'dummy_data', // Mock upload
+            'base64_image': _base64Image,
           });
         } catch (_) {}
       }
@@ -152,6 +200,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _signIn(PhoneAuthCredential credential) async {
     await FirebaseAuth.instance.signInWithCredential(credential);
     if (!mounted) return;
+    
+    final auth = context.read<AuthService>();
+    final api = context.read<ApiService>();
+    try {
+      final data = await api.getHomeSummary(auth.uid!);
+      if (data['user'] != null && data['user']['name'] != null) {
+        final user = data['user'];
+        context.read<UserProvider>().setUser(
+          uid: auth.uid!,
+          name: user['name'] ?? '',
+          phone: user['phone'] ?? '',
+          bloodType: user['blood_type'] ?? '',
+        );
+        setState(() { _loading = false; });
+        context.go('/home');
+        return;
+      }
+    } catch (_) {}
+
     setState(() { _loading = false; });
     _nextPage();
   }
