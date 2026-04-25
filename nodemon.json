@@ -1,0 +1,8 @@
+{
+  "ignore": [
+    "mobile/*",
+    "artifacts/*",
+    "brain/*",
+    "knowledge/*"
+  ]
+}

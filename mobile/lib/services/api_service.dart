@@ -13,7 +13,7 @@ class ApiService {
         return 'http://localhost:8085/api';
       }
       if (defaultTargetPlatform == TargetPlatform.android) {
-        return 'http://10.0.2.2:8085/api'; // Android Emulator alias
+        return 'http://10.126.159.119:8085/api'; // Local Network IP for physical device/emulator
       }
       return 'http://localhost:8085/api'; // Windows / iOS Simulator
     }
@@ -36,26 +36,56 @@ class ApiService {
   }
 
   Map<String, dynamic> _decodeMap(http.Response res) {
+    if (res.statusCode >= 400) {
+      try {
+        final decoded = jsonDecode(res.body);
+        if (decoded is Map<String, dynamic> && decoded.containsKey('error')) {
+          return {'error': decoded['error'], 'status': res.statusCode};
+        }
+      } catch (_) {}
+      return {'error': 'Server Error', 'status': res.statusCode};
+    }
     try {
       final decoded = jsonDecode(res.body);
       if (decoded is Map<String, dynamic>) return decoded;
       return {'data': decoded};
     } catch (_) {
-      return {'error': 'Invalid response', 'status': res.statusCode};
+      return {'error': 'Invalid response format', 'status': res.statusCode};
     }
   }
 
   List<dynamic> _decodeList(http.Response res) {
+    if (res.statusCode >= 400) {
+      print('API Error [${res.statusCode}]: ${res.body}');
+      return [];
+    }
     try {
       final decoded = jsonDecode(res.body);
       if (decoded is List) return decoded;
       return [];
-    } catch (_) {
+    } catch (e) {
+      print('JSON Parse Error: $e');
       return [];
     }
   }
 
   // ── AUTH ────────────────────────────────────────────────
+  Future<Map<String, dynamic>> getUserProfile(String uid) async {
+    final res = await http.get(
+      Uri.parse('$_baseUrl/auth/user/$uid'),
+      headers: await _getHeaders(),
+    ).timeout(_timeout);
+    return _decodeMap(res);
+  }
+
+  Future<Map<String, dynamic>> getUserByPhone(String phone) async {
+    final res = await http.get(
+      Uri.parse('$_baseUrl/auth/phone/$phone'),
+      headers: await _getHeaders(),
+    ).timeout(_timeout);
+    return _decodeMap(res);
+  }
+
   Future<Map<String, dynamic>> register(Map<String, dynamic> body) async {
     final res = await http.post(
       Uri.parse('$_baseUrl/auth/register'),

@@ -37,6 +37,13 @@ class UserProvider extends ChangeNotifier {
   }
 
   void updateHomeSummary(Map<String, dynamic> summary) {
+    if (summary['user'] != null) {
+      final u = summary['user'];
+      _name = u['name'];
+      _phone = u['phone'];
+      _bloodType = u['blood_type'];
+      _role = u['role'];
+    }
     final fitness = summary['fitness_status'] as Map<String, dynamic>? ?? {};
     _fitnessScore = (fitness['score'] as num?)?.toDouble() ?? 0;
     _isEligible = fitness['is_eligible'] as bool? ?? false;

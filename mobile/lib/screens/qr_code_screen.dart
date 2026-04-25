@@ -95,6 +95,7 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
       await file.writeAsBytes(bytes);
       await Share.shareXFiles([XFile(file.path)], text: 'My AiDrona Blood Donor QR');
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Failed to share QR Code'),
         backgroundColor: AppTheme.danger,

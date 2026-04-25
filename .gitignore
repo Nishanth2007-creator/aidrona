@@ -28,3 +28,6 @@ android/app/src/main/res/values/strings.xml
 # OS files
 .DS_Store
 Thumbs.db
+
+# Temporary Scripts
+scratch/

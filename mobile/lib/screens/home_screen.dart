@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +6,7 @@ import '../providers/user_provider.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../widgets/fitness_ring.dart';
 import '../widgets/eligibility_badge.dart';
 import '../widgets/activity_card.dart';
@@ -18,11 +20,19 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, dynamic>> _recentActivity = [];
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadSummary());
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) => _loadSummary());
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadSummary() async {
@@ -36,6 +46,12 @@ class _HomeScreenState extends State<HomeScreen> {
         if (activity is List) {
           _recentActivity = activity.cast<Map<String, dynamic>>();
         }
+      }
+      
+      // Sync FCM token
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      if (fcmToken != null) {
+        await context.read<ApiService>().updateUserProfile(uid, {'fcm_token': fcmToken});
       }
     } catch (_) {}
     if (mounted) setState(() {});

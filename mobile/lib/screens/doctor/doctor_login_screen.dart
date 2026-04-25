@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -49,8 +50,10 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
     }
     setState(() { _loading = true; _error = null; });
     try {
-      final result =
-          await context.read<ApiService>().verifyDoctor(regId, phone: phone);
+      final result = await context
+          .read<ApiService>()
+          .verifyDoctor(regId, phone: phone)
+          .timeout(const Duration(seconds: 15));
       if (result['verified'] == true) {
         // Persist reg_id for use in medical update screen
         final prefs = await SharedPreferences.getInstance();
@@ -63,10 +66,14 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
         setState(() { _error = 'Verification failed'; _loading = false; });
       }
     } catch (e) {
+      String msg = 'Verification error. Please try again.';
+      if (e is TimeoutException) {
+        msg = 'Connection timed out. Check your internet.';
+      } else if (e.toString().contains('not registered')) {
+        msg = 'Doctor ID not found in system. Use DR-XXXXX format for demos.';
+      }
       setState(() {
-        _error = e.toString().contains('not registered')
-            ? 'Doctor ID not found in system. Use DR-XXXXX format for demos.'
-            : 'Verification error. Please try again.';
+        _error = msg;
         _loading = false;
       });
     }
@@ -181,6 +188,14 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
                 loading: _loading,
                 label: 'Verify & Continue',
                 color: AppTheme.teal,
+              ),
+              const SizedBox(height: 20),
+              Center(
+                child: TextButton(
+                  onPressed: () => context.go('/role-select'),
+                  child: const Text('Not a doctor? Go back', 
+                    style: TextStyle(fontFamily: 'Inter', color: AppTheme.onSurfaceMuted)),
+                ),
               ),
               const Spacer(flex: 2),
             ],

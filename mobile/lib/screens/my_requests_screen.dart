@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
@@ -68,6 +69,7 @@ class _RequestsListState extends State<_RequestsList>
   List<dynamic> _items = [];
   bool _loading = true;
   String? _error;
+  Timer? _refreshTimer;
 
   @override
   bool get wantKeepAlive => true;
@@ -76,10 +78,18 @@ class _RequestsListState extends State<_RequestsList>
   void initState() {
     super.initState();
     _load();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) => _load(silent: true));
   }
 
-  Future<void> _load() async {
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load({bool silent = false}) async {
     try {
+      if (!silent) setState(() => _loading = true);
       final uid = context.read<AuthService>().uid;
       if (uid == null) {
         setState(() => _loading = false);

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createUser, createDonorProfile, getUser, updateUser, getDoctor } = require('../db/firestore');
+const { createUser, createDonorProfile, getUser, updateUser, getDoctor, getUserByPhone } = require('../db/firestore');
 const { evaluateDonorFitness } = require('../ai/gemini');
 
 // POST /api/auth/register
@@ -51,6 +51,17 @@ router.get('/user/:uid', async (req, res) => {
   try {
     const user = await getUser(req.params.uid);
     if (!user) return res.status(404).json({ error: 'User not found' });
+    return res.json(user);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/auth/phone/:phone
+router.get('/phone/:phone', async (req, res) => {
+  try {
+    const user = await getUserByPhone(req.params.phone);
+    if (!user) return res.status(404).json({ error: 'User not found by phone' });
     return res.json(user);
   } catch (err) {
     return res.status(500).json({ error: err.message });

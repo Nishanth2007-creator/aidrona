@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../providers/user_provider.dart';
@@ -29,7 +32,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _nameCtrl = TextEditingController();
   final _emergencyContactCtrl = TextEditingController();
   final _emergencyPhoneCtrl = TextEditingController();
-  
+
   String _bloodType = 'O+';
   bool _uploadedDoc = false;
   String? _verificationId;
@@ -37,7 +40,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String? _error;
   String? _base64Image;
 
-  final List<String> _bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+  final List<String> _bloodTypes = [
+    'A+',
+    'A-',
+    'B+',
+    'B-',
+    'AB+',
+    'AB-',
+    'O+',
+    'O-'
+  ];
 
   @override
   void dispose() {
@@ -53,10 +65,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _nextPage() => _pageController.nextPage(
       duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
 
+  String _loadingStatus = '';
+
   Future<void> _sendOtp() async {
     final phone = _phoneCtrl.text.trim();
     if (phone.isEmpty) return;
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+      _loadingStatus = 'Sending OTP...';
+    });
 
     final auth = context.read<AuthService>();
     await auth.sendOtp(
@@ -65,23 +83,66 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         await _signIn(cred);
       },
       onCodeSent: (vid, _) {
-        setState(() { _verificationId = vid; _loading = false; });
+        if (!mounted) return;
+        setState(() {
+          _verificationId = vid;
+          _loading = false;
+          _error = null;
+          _loadingStatus = '';
+        });
         _nextPage();
       },
-      onError: (e) => setState(() { _error = e.message; _loading = false; }),
+      onError: (e) {
+        if (!mounted) return;
+        debugPrint('Phone Auth Error: ${e.code} - ${e.message}');
+        setState(() {
+          _error = 'Firebase Auth Error: ${e.message}';
+          _loading = false;
+          _loadingStatus = '';
+        });
+      },
     );
+
+    // Add a safety timeout to reset loading if nothing happens for 30s
+    Future.delayed(const Duration(seconds: 30), () {
+      if (mounted && _loading) {
+        setState(() {
+          _loading = false;
+          _error =
+              'Verification taking longer than expected. Please check your connection and ensure the backend is running.';
+          _loadingStatus = '';
+        });
+      }
+    });
   }
 
   Future<void> _verifyOtp() async {
     if (_verificationId == null) return;
-    setState(() { _loading = true; });
+    setState(() {
+      _loading = true;
+      _loadingStatus = 'Verifying OTP...';
+    });
     final auth = context.read<AuthService>();
-    final cred = await auth.verifyOtp(_verificationId!, _otpCtrl.text.trim());
-    if (cred != null) {
-      setState(() { _loading = false; });
-      _nextPage();
-    } else {
-      setState(() { _error = 'Invalid OTP'; _loading = false; });
+    try {
+      final cred = await auth.verifyOtp(_verificationId!, _otpCtrl.text.trim());
+      if (cred != null) {
+        await _signIn(cred.credential as PhoneAuthCredential? ??
+            PhoneAuthProvider.credential(
+                verificationId: _verificationId!,
+                smsCode: _otpCtrl.text.trim()));
+      } else {
+        setState(() {
+          _error = 'Invalid OTP';
+          _loading = false;
+          _loadingStatus = '';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Verification failed: ${e.toString()}';
+        _loading = false;
+        _loadingStatus = '';
+      });
     }
   }
 
@@ -98,19 +159,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       backgroundColor: AppTheme.surfaceCard,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt_outlined, color: AppTheme.primary),
-              title: const Text('Take Photo', style: TextStyle(fontFamily: 'Inter', color: AppTheme.onSurface)),
+              leading: const Icon(Icons.camera_alt_outlined,
+                  color: AppTheme.primary),
+              title: const Text('Take Photo',
+                  style: TextStyle(
+                      fontFamily: 'Inter', color: AppTheme.onSurface)),
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined, color: AppTheme.primary),
-              title: const Text('Choose from Gallery', style: TextStyle(fontFamily: 'Inter', color: AppTheme.onSurface)),
+              leading: const Icon(Icons.photo_library_outlined,
+                  color: AppTheme.primary),
+              title: const Text('Choose from Gallery',
+                  style: TextStyle(
+                      fontFamily: 'Inter', color: AppTheme.onSurface)),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
           ],
@@ -130,37 +198,59 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: source);
-    
+
     if (image != null) {
-      setState(() { _loading = true; _error = null; });
+      setState(() {
+        _loading = true;
+        _error = null;
+        _loadingStatus = 'Processing image...';
+      });
       try {
         final bytes = await File(image.path).readAsBytes();
         _base64Image = base64Encode(bytes);
-        setState(() { _uploadedDoc = true; _loading = false; });
+        setState(() {
+          _uploadedDoc = true;
+          _loading = false;
+          _loadingStatus = '';
+        });
       } catch (e) {
-        setState(() { _error = 'Failed to process image'; _loading = false; });
+        setState(() {
+          _error = 'Failed to process image';
+          _loading = false;
+          _loadingStatus = '';
+        });
       }
     }
   }
 
   Future<void> _register() async {
-    setState(() { _loading = true; });
+    setState(() {
+      _loading = true;
+      _loadingStatus = 'Creating account...';
+    });
     try {
       final auth = context.read<AuthService>();
       final api = context.read<ApiService>();
       Position? pos;
       try {
+        setState(() => _loadingStatus = 'Getting location...');
         LocationPermission permission = await Geolocator.checkPermission();
         if (permission == LocationPermission.denied) {
           permission = await Geolocator.requestPermission();
         }
-        if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
-          pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+        if (permission == LocationPermission.whileInUse ||
+            permission == LocationPermission.always) {
+          pos = await Geolocator.getCurrentPosition(
+              desiredAccuracy: LocationAccuracy.medium,
+              timeLimit: const Duration(seconds: 10));
         }
       } catch (e) {
         debugPrint('GPS Error: $e');
       }
 
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+
+      setState(() => _loadingStatus = 'Syncing with server...');
       await api.register({
         'uid': auth.uid,
         'name': _nameCtrl.text.trim(),
@@ -170,12 +260,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         'emergency_contact_phone': _emergencyPhoneCtrl.text.trim(),
         'lat': pos?.latitude ?? 0,
         'lng': pos?.longitude ?? 0,
-        'role': 'patient',
+        'fcm_token': fcmToken,
+        'role': 'donor',
       });
-      
+
       // If doc uploaded, we should ideally call /medical/upload, simulating AI parsing
       if (_uploadedDoc && auth.uid != null && _base64Image != null) {
         try {
+          setState(() => _loadingStatus = 'Analyzing medical record...');
           await api.uploadMedicalRecord({
             'patient_id': auth.uid,
             'hospital': 'AIdrona Upload',
@@ -186,41 +278,91 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       if (!mounted) return;
       context.read<UserProvider>().setUser(
-        uid: auth.uid!,
-        name: _nameCtrl.text.trim(),
-        phone: auth.phone ?? '',
-        bloodType: _bloodType,
-      );
+            uid: auth.uid!,
+            name: _nameCtrl.text.trim(),
+            phone: auth.phone ?? '',
+            bloodType: _bloodType,
+          );
       context.go('/home');
     } catch (e) {
-      setState(() { _error = e.toString(); _loading = false; });
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+        _loadingStatus = '';
+      });
     }
   }
 
   Future<void> _signIn(PhoneAuthCredential credential) async {
-    await FirebaseAuth.instance.signInWithCredential(credential);
-    if (!mounted) return;
-    
-    final auth = context.read<AuthService>();
-    final api = context.read<ApiService>();
+    setState(() {
+      _loading = true;
+      _loadingStatus = 'Signing in to Firebase...';
+    });
     try {
-      final data = await api.getHomeSummary(auth.uid!);
-      if (data['user'] != null && data['user']['name'] != null) {
-        final user = data['user'];
-        context.read<UserProvider>().setUser(
+      final userCred = await FirebaseAuth.instance
+          .signInWithCredential(credential)
+          .timeout(const Duration(seconds: 15));
+      if (!mounted) return;
+
+      final user = userCred.user;
+      if (user != null) {
+        setState(() => _loadingStatus = 'Authenticating with server...');
+        final token = await user.getIdToken();
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('auth_token', token ?? '');
+      }
+
+      if (!mounted) return;
+      final auth = context.read<AuthService>();
+      final api = context.read<ApiService>();
+      final userProvider = context.read<UserProvider>();
+
+      // Try to get user profile to see if they are already registered
+      setState(() => _loadingStatus = 'Checking existing profile...');
+      final data = await api
+          .getUserProfile(auth.uid!)
+          .timeout(const Duration(seconds: 15));
+      if (!mounted) return;
+
+      if (data['name'] != null && data['error'] == null) {
+        userProvider.setUser(
           uid: auth.uid!,
-          name: user['name'] ?? '',
-          phone: user['phone'] ?? '',
-          bloodType: user['blood_type'] ?? '',
+          name: data['name'] ?? '',
+          phone: data['phone'] ?? data['phone_number'] ?? '',
+          bloodType: data['blood_type'] ?? '',
         );
-        setState(() { _loading = false; });
-        context.go('/home');
+        setState(() {
+          _loading = false;
+          _loadingStatus = '';
+        });
+        if (mounted) context.go('/home');
         return;
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('SignIn/Profile Error: $e');
+      if (e is TimeoutException) {
+        setState(() {
+          _error =
+              'Connection timed out. Is the backend running at 10.0.2.2:8085?';
+          _loading = false;
+          _loadingStatus = '';
+        });
+      } else {
+        setState(() {
+          _error = 'Sign in failed: ${e.toString()}';
+          _loading = false;
+          _loadingStatus = '';
+        });
+      }
+      return;
+    }
 
-    setState(() { _loading = false; });
-    _nextPage();
+    // New user or profile not found
+    setState(() {
+      _loading = false;
+      _loadingStatus = '';
+    });
+    if (_pageController.page != 2) _nextPage();
   }
 
   @override
@@ -249,11 +391,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             _PhonePage(
                 ctrl: _phoneCtrl,
                 loading: _loading,
+                loadingStatus: _loadingStatus,
                 error: _error,
                 onSend: _sendOtp),
             _OtpPage(
                 ctrl: _otpCtrl,
                 loading: _loading,
+                loadingStatus: _loadingStatus,
                 error: _error,
                 onVerify: _verifyOtp),
             _ProfilePage(
@@ -268,6 +412,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             _MedicalUploadPage(
               loading: _loading,
+              loadingStatus: _loadingStatus,
               uploaded: _uploadedDoc,
               error: _error,
               onUpload: _simulateUpload,
@@ -283,10 +428,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 class _PhonePage extends StatelessWidget {
   final TextEditingController ctrl;
   final bool loading;
+  final String loadingStatus;
   final String? error;
   final VoidCallback onSend;
   const _PhonePage(
-      {required this.ctrl, required this.loading, this.error, required this.onSend});
+      {required this.ctrl,
+      required this.loading,
+      required this.loadingStatus,
+      this.error,
+      required this.onSend});
 
   @override
   Widget build(BuildContext context) {
@@ -313,7 +463,8 @@ class _PhonePage extends StatelessWidget {
           Row(
             children: [
               Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
                   decoration: BoxDecoration(
                       color: AppTheme.surfaceElevated,
                       borderRadius: BorderRadius.circular(14)),
@@ -338,14 +489,29 @@ class _PhonePage extends StatelessWidget {
             Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(error!,
-                    style: const TextStyle(color: AppTheme.danger, fontSize: 13))),
+                    style:
+                        const TextStyle(color: AppTheme.danger, fontSize: 13))),
           const Spacer(),
           Padding(
             padding: const EdgeInsets.only(bottom: 24),
-            child: GradientButton(
-                onPressed: loading ? null : onSend,
-                loading: loading,
-                label: 'Send OTP'),
+            child: Column(
+              children: [
+                if (loading && loadingStatus.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(loadingStatus,
+                        style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14,
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.w500)),
+                  ),
+                GradientButton(
+                    onPressed: loading ? null : onSend,
+                    loading: loading,
+                    label: 'Send OTP'),
+              ],
+            ),
           ),
         ],
       ),
@@ -356,10 +522,15 @@ class _PhonePage extends StatelessWidget {
 class _OtpPage extends StatelessWidget {
   final TextEditingController ctrl;
   final bool loading;
+  final String loadingStatus;
   final String? error;
   final VoidCallback onVerify;
   const _OtpPage(
-      {required this.ctrl, required this.loading, this.error, required this.onVerify});
+      {required this.ctrl,
+      required this.loading,
+      required this.loadingStatus,
+      this.error,
+      required this.onVerify});
 
   @override
   Widget build(BuildContext context) {
@@ -395,14 +566,29 @@ class _OtpPage extends StatelessWidget {
             Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(error!,
-                    style: const TextStyle(color: AppTheme.danger, fontSize: 13))),
+                    style:
+                        const TextStyle(color: AppTheme.danger, fontSize: 13))),
           const Spacer(),
           Padding(
             padding: const EdgeInsets.only(bottom: 24),
-            child: GradientButton(
-                onPressed: loading ? null : onVerify,
-                loading: loading,
-                label: 'Verify'),
+            child: Column(
+              children: [
+                if (loading && loadingStatus.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(loadingStatus,
+                        style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14,
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.w500)),
+                  ),
+                GradientButton(
+                    onPressed: loading ? null : onVerify,
+                    loading: loading,
+                    label: 'Verify'),
+              ],
+            ),
           ),
         ],
       ),
@@ -419,7 +605,7 @@ class _ProfilePage extends StatelessWidget {
   final String? error;
   final Function(String) onBloodTypeSelect;
   final VoidCallback onNext;
-  
+
   const _ProfilePage(
       {required this.nameCtrl,
       required this.emergencyContactCtrl,
@@ -474,8 +660,8 @@ class _ProfilePage extends StatelessWidget {
               decoration: const InputDecoration(
                   labelText: 'Emergency Phone Number',
                   counterText: '',
-                  prefixIcon: Icon(Icons.phone_rounded,
-                      color: AppTheme.amber))),
+                  prefixIcon:
+                      Icon(Icons.phone_rounded, color: AppTheme.amber))),
           const SizedBox(height: 28),
           const Text('Blood Type',
               style: TextStyle(
@@ -496,9 +682,8 @@ class _ProfilePage extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   decoration: BoxDecoration(
-                    color: selected
-                        ? AppTheme.primary
-                        : AppTheme.surfaceElevated,
+                    color:
+                        selected ? AppTheme.primary : AppTheme.surfaceElevated,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                         color: selected ? AppTheme.primary : Colors.transparent,
@@ -515,7 +700,8 @@ class _ProfilePage extends StatelessWidget {
                       style: TextStyle(
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w600,
-                          color: selected ? Colors.white : AppTheme.onSurfaceMuted,
+                          color:
+                              selected ? Colors.white : AppTheme.onSurfaceMuted,
                           fontSize: 15)),
                 ),
               );
@@ -527,10 +713,7 @@ class _ProfilePage extends StatelessWidget {
                 child: Text(error!,
                     style: const TextStyle(color: AppTheme.danger))),
           const SizedBox(height: 48),
-          GradientButton(
-              onPressed: onNext,
-              loading: false,
-              label: 'Continue'),
+          GradientButton(onPressed: onNext, loading: false, label: 'Continue'),
           const SizedBox(height: 40),
         ],
       ),
@@ -540,12 +723,14 @@ class _ProfilePage extends StatelessWidget {
 
 class _MedicalUploadPage extends StatelessWidget {
   final bool loading;
+  final String loadingStatus;
   final bool uploaded;
   final String? error;
   final VoidCallback onUpload;
   final VoidCallback onRegister;
   const _MedicalUploadPage({
     required this.loading,
+    required this.loadingStatus,
     required this.uploaded,
     this.error,
     required this.onUpload,
@@ -567,37 +752,49 @@ class _MedicalUploadPage extends StatelessWidget {
                   fontSize: 32,
                   color: AppTheme.onSurface)),
           const SizedBox(height: 8),
-          const Text('Upload past medical prescriptions for AI fitness evaluation (Optional)',
+          const Text(
+              'Upload past medical prescriptions for AI fitness evaluation (Optional)',
               style: TextStyle(
                   color: AppTheme.onSurfaceMuted, fontFamily: 'Inter')),
           const SizedBox(height: 36),
-          
           GestureDetector(
             onTap: (loading || uploaded) ? null : onUpload,
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: uploaded ? AppTheme.primary.withValues(alpha: 0.1) : AppTheme.surfaceElevated,
+                color: uploaded
+                    ? AppTheme.primary.withValues(alpha: 0.1)
+                    : AppTheme.surfaceElevated,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: uploaded ? AppTheme.primary : AppTheme.primary.withValues(alpha: 0.2),
+                  color: uploaded
+                      ? AppTheme.primary
+                      : AppTheme.primary.withValues(alpha: 0.2),
                   width: uploaded ? 2 : 1,
                 ),
               ),
               child: Column(
                 children: [
-                   Icon(
-                    uploaded ? Icons.check_circle_rounded : Icons.cloud_upload_rounded,
+                  Icon(
+                    uploaded
+                        ? Icons.check_circle_rounded
+                        : Icons.cloud_upload_rounded,
                     size: 48,
-                    color: uploaded ? AppTheme.primary : AppTheme.onSurfaceMuted,
+                    color:
+                        uploaded ? AppTheme.primary : AppTheme.onSurfaceMuted,
                   ),
                   const SizedBox(height: 16),
                   if (loading && !uploaded)
-                    const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                    const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2))
                   else
                     Text(
-                      uploaded ? 'Document Uploaded & Scanned!' : 'Tap to upload Image or PDF',
+                      uploaded
+                          ? 'Document Uploaded & Scanned!'
+                          : 'Tap to upload Image or PDF',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w600,
@@ -608,7 +805,6 @@ class _MedicalUploadPage extends StatelessWidget {
               ),
             ),
           ),
-          
           if (error != null)
             Padding(
                 padding: const EdgeInsets.only(top: 24),
@@ -617,25 +813,44 @@ class _MedicalUploadPage extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppTheme.danger.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
+                    border: Border.all(
+                        color: AppTheme.danger.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: AppTheme.danger, size: 20),
+                      const Icon(Icons.error_outline,
+                          color: AppTheme.danger, size: 20),
                       const SizedBox(width: 8),
-                      Expanded(child: Text(error!, style: const TextStyle(color: AppTheme.danger, fontFamily: 'Inter', fontSize: 13))),
+                      Expanded(
+                          child: Text(error!,
+                              style: const TextStyle(
+                                  color: AppTheme.danger,
+                                  fontFamily: 'Inter',
+                                  fontSize: 13))),
                     ],
                   ),
-                )
-            ),
-          
+                )),
           const Spacer(),
           Padding(
             padding: const EdgeInsets.only(bottom: 24),
-            child: GradientButton(
-                onPressed: loading ? null : onRegister,
-                loading: loading,
-                label: uploaded ? 'Complete Registration' : 'Skip for now'),
+            child: Column(
+              children: [
+                if (loading && loadingStatus.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(loadingStatus,
+                        style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14,
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.w500)),
+                  ),
+                GradientButton(
+                    onPressed: loading ? null : onRegister,
+                    loading: loading,
+                    label: uploaded ? 'Complete Registration' : 'Skip for now'),
+              ],
+            ),
           ),
         ],
       ),

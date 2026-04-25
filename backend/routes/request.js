@@ -3,7 +3,8 @@ const router = express.Router();
 const {
   createCrisisRequest, getCrisisRequest, updateCrisisRequest,
   getDonorsWithinRadius, createDonorResponse, createNotification, getUser,
-  getCrisisRequestsByUser, getDonorResponsesByUser,
+  getCrisisRequestsByUser, getDonorResponsesByUser, getDonorsByPhoneNumbers,
+  getDonorResponseByCrisisAndDonor,
 } = require('../db/firestore');
 const { triageBloodRequest, rankDonors } = require('../ai/gemini');
 
@@ -38,8 +39,10 @@ router.post('/blood', async (req, res) => {
     let ranked = [];
 
     // Step 3: CONTACTS FIRST — find app users who are in contacts
+    console.log(`[Request] Checking ${contact_phone_numbers.length} contacts for blood_type: ${blood_type}`);
     if (contact_phone_numbers.length > 0) {
       const contactDonors = await getDonorsByPhoneNumbers(contact_phone_numbers, blood_type);
+      console.log(`[Request] Found ${contactDonors.length} compatible contact donors.`);
 
       if (contactDonors.length > 0) {
         const ranking = await rankDonors({
@@ -50,6 +53,10 @@ router.post('/blood', async (req, res) => {
         ranked = ranking.ranked_donor_ids || [];
 
         for (const donor_id of ranked.slice(0, 5)) {
+          // Prevent duplicate notifications
+          const existing = await getDonorResponseByCrisisAndDonor(crisis_id, donor_id);
+          if (existing) continue;
+
           await createDonorResponse({ crisis_id, donor_id });
           await createNotification({
             user_id: donor_id,
@@ -67,8 +74,11 @@ router.post('/blood', async (req, res) => {
     // Step 4: FALLBACK — if no contacts found, open to nearby strangers immediately
     if (donors_notified === 0) {
       phase = 'strangers';
-      const nearbyDonors = await getDonorsWithinRadius(lat, lng, triage.recommended_radius_km || 5, blood_type);
+      const radius = triage.recommended_radius_km || 5;
+      console.log(`[Request] Falling back to strangers in ${radius}km radius`);
+      const nearbyDonors = await getDonorsWithinRadius(lat, lng, radius, blood_type);
       const strangers = nearbyDonors.filter(d => d.donor_id !== requester_id);
+      console.log(`[Request] Found ${strangers.length} compatible nearby strangers.`);
 
       if (strangers.length > 0) {
         const ranking = await rankDonors({
@@ -79,6 +89,10 @@ router.post('/blood', async (req, res) => {
         ranked = ranking.ranked_donor_ids || [];
 
         for (const donor_id of ranked.slice(0, 5)) {
+          // Prevent duplicate notifications
+          const existing = await getDonorResponseByCrisisAndDonor(crisis_id, donor_id);
+          if (existing) continue;
+
           await createDonorResponse({ crisis_id, donor_id });
           await createNotification({
             user_id: donor_id,
@@ -90,9 +104,13 @@ router.post('/blood', async (req, res) => {
           });
           donors_notified++;
         }
-        await updateCrisisRequest(crisis_id, { contacts_only: false });
+        await updateCrisisRequest(crisis_id, { contacts_only: false, donors_notified_count: donors_notified });
       }
+    } else {
+      // If we did notify contacts, update the count too
+      await updateCrisisRequest(crisis_id, { donors_notified_count: donors_notified });
     }
+    console.log(`[Request] Completed. Notified: ${donors_notified} via ${phase}`);
 
     return res.status(201).json({
       crisis_id,
@@ -170,6 +188,10 @@ router.post('/:id/open', async (req, res) => {
     });
 
     for (const donor_id of (ranking.ranked_donor_ids || []).slice(0, 10)) {
+      // Prevent duplicate notifications
+      const existing = await getDonorResponseByCrisisAndDonor(req.params.id, donor_id);
+      if (existing) continue;
+
       await createDonorResponse({ crisis_id: req.params.id, donor_id });
       await createNotification({
         user_id: donor_id,
@@ -187,17 +209,6 @@ router.post('/:id/open', async (req, res) => {
   }
 });
 
-// GET /api/request/:id
-router.get('/:id', async (req, res) => {
-  try {
-    const crisis = await getCrisisRequest(req.params.id);
-    if (!crisis) return res.status(404).json({ error: 'Crisis not found' });
-    return res.json(crisis);
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-});
-
 // GET /api/request/list?user_id=xxx&type=sent|received
 router.get('/list', async (req, res) => {
   try {
@@ -209,6 +220,17 @@ router.get('/list', async (req, res) => {
     }
     const crises = await getCrisisRequestsByUser(user_id);
     return res.json(crises);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/request/:id
+router.get('/:id', async (req, res) => {
+  try {
+    const crisis = await getCrisisRequest(req.params.id);
+    if (!crisis) return res.status(404).json({ error: 'Crisis not found' });
+    return res.json(crisis);
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

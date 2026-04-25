@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -16,11 +17,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   List<Map<String, dynamic>> _notifications = [];
   bool _loading = true;
   String? _error;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -81,6 +90,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case 'medical_reminder':
       case 'request_filled':
         return Icons.medical_information_rounded;
+      case 'request_closed':
+        return Icons.cancel_rounded;
       default:
         return Icons.notifications_rounded;
     }
@@ -98,6 +109,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return AppTheme.onSurfaceMuted;
       case 'medical_reminder':
         return AppTheme.primary;
+      case 'request_closed':
+        return AppTheme.danger;
       default:
         return AppTheme.onSurfaceMuted;
     }

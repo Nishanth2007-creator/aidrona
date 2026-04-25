@@ -14,19 +14,31 @@ class _RequestCardState extends State<RequestCard> {
 
   Color get _statusColor {
     switch (widget.data['status']) {
-      case 'fulfilled': return AppTheme.eligible;
-      case 'escalated_to_bank': return AppTheme.amber;
-      case 'open': return AppTheme.primary;
-      default: return AppTheme.onSurfaceMuted;
+      case 'fulfilled':
+        return AppTheme.eligible;
+      case 'escalated_to_bank':
+        return AppTheme.amber;
+      case 'open':
+        return AppTheme.primary;
+      case 'closed_no_donor':
+        return AppTheme.danger;
+      default:
+        return AppTheme.onSurfaceMuted;
     }
   }
 
   String get _statusLabel {
     switch (widget.data['status']) {
-      case 'fulfilled': return 'Fulfilled';
-      case 'escalated_to_bank': return 'Escalated';
-      case 'open': return 'Open';
-      default: return 'Closed';
+      case 'fulfilled':
+        return 'Fulfilled';
+      case 'escalated_to_bank':
+        return 'Escalated';
+      case 'open':
+        return 'Open';
+      case 'closed_no_donor':
+        return 'No Donor Found';
+      default:
+        return 'Closed';
     }
   }
 

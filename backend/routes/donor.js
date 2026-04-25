@@ -57,6 +57,10 @@ router.post('/verify', async (req, res) => {
             donor_candidates: remaining.slice(0, 10),
           });
           for (const did of (ranking.ranked_donor_ids || []).slice(0, 3)) {
+            // Prevent duplicate notifications
+            const existing = await getDonorResponseByCrisisAndDonor(crisis_id, did);
+            if (existing) continue;
+
             await createDonorResponse({ crisis_id, donor_id: did });
             await createNotification({
               user_id: did,
@@ -68,6 +72,15 @@ router.post('/verify', async (req, res) => {
             });
           }
         }
+        
+        // Notify requester that donor was unfit
+        await createNotification({
+          user_id: crisis.requester_id,
+          type: 'request_update',
+          title: 'Donor Found Unfit',
+          body: 'The donor who accepted your request was found ineligible after a medical check. We are searching for new donors.',
+          deep_link: '/requests',
+        });
       }
 
       return res.json({ message: 'Donor marked unfit, score penalised, search re-triggered', new_score: penalisedScore });

@@ -9,11 +9,11 @@ router.post('/home/summary', async (req, res) => {
     if (!user_id) return res.status(400).json({ error: 'user_id required' });
 
     const [user, donorProfile, medicalRecord, notifications, recentRequests] = await Promise.all([
-      getUser(user_id),
-      getDonorProfile(user_id),
-      getMedicalRecord(user_id),
-      getUserNotifications(user_id),
-      getCrisisRequestsByUser(user_id),
+      getUser(user_id).catch(e => { console.error('getUser error:', e); return null; }),
+      getDonorProfile(user_id).catch(e => { console.error('getDonorProfile error:', e); return null; }),
+      getMedicalRecord(user_id).catch(e => { console.error('getMedicalRecord error:', e); return null; }),
+      getUserNotifications(user_id).catch(e => { console.error('getUserNotifications error:', e); return []; }),
+      getCrisisRequestsByUser(user_id).catch(e => { console.error('getCrisisRequestsByUser error:', e); return []; }),
     ]);
 
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -27,14 +27,21 @@ router.post('/home/summary', async (req, res) => {
     }
 
     return res.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        phone: user.phone || user.phone_number,
+        blood_type: user.blood_type,
+        role: user.role
+      },
       fitness_status: {
         score: donorProfile?.fitness_score ?? 0,
         is_eligible: donorProfile?.is_eligible ?? false,
         last_donation_date: donorProfile?.last_donation_date ?? null,
       },
       expiry_warning,
-      unread_notifications: notifications.filter((n) => !n.read).length,
-      recent_activity: recentRequests.slice(0, 3).map((r) => ({
+      unread_notifications: (notifications || []).filter((n) => !n.read).length,
+      recent_activity: (recentRequests || []).slice(0, 3).map((r) => ({
         type: r.status === 'fulfilled' ? 'Donation Request' : 'Blood Request',
         blood_type: r.blood_type,
         status: r.status,

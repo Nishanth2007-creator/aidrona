@@ -31,15 +31,33 @@ async function getUser(uid) {
   return snap.exists ? { id: snap.id, ...snap.data() } : null;
 }
 
+async function getUserByPhone(phone) {
+  const cleanPhone = phone.replaceAll(' ', '');
+  const searchValues = [cleanPhone];
+  if (!cleanPhone.startsWith('+')) searchValues.push('+91' + cleanPhone);
+  if (cleanPhone.startsWith('+91')) searchValues.push(cleanPhone.replace('+91', ''));
+
+  for (const val of searchValues) {
+    // Check 'phone_number' field
+    let snap = await db.collection('users').where('phone_number', '==', val).limit(1).get();
+    if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data() };
+
+    // Check 'phone' field (legacy/fallback)
+    snap = await db.collection('users').where('phone', '==', val).limit(1).get();
+    if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data() };
+  }
+  
+  return null;
+}
+
 async function updateUser(uid, data) {
   await db.collection('users').doc(uid).update(data);
 }
 
 // ─── DONOR PROFILES ──────────────────────────────────────────
-async function createDonorProfile(uid, fitnessResult) {
+async function createDonorProfile(uid, data) {
   await db.collection('donor_profiles').doc(uid).set({
-    fitness_score: fitnessResult.fitness_score,
-    is_eligible: fitnessResult.is_eligible,
+    ...data,
     last_donation_date: null,
     donation_count: 0,
     score_updated_at: Firestore.Timestamp.now(),
@@ -63,17 +81,19 @@ async function getDonorsWithinRadius(lat, lng, radius_km, blood_type) {
   const latDelta = radius_km / 111;
   const lngDelta = radius_km / (111 * Math.cos((lat * Math.PI) / 180));
 
-  // Get eligible donor profiles with matching blood type (denormalised)
+  // Get eligible donor profiles
   const snap = await db
     .collection('donor_profiles')
     .where('is_eligible', '==', true)
-    .where('blood_type', '==', blood_type)
     .orderBy('fitness_score', 'desc')
     .get();
 
   const donors = [];
   snap.forEach((doc) => {
     const d = doc.data();
+    // Filter by compatibility
+    if (!isCompatible(d.blood_type, blood_type)) return;
+
     // Filter by bounding box using denormalised lat/lng
     if (
       d.lat >= lat - latDelta &&
@@ -325,7 +345,6 @@ async function getDonorsByPhoneNumbers(phoneNumbers, requested_blood_type) {
   for (const chunk of chunks) {
     const snapshot = await db.collection('users')
       .where('phone_number', 'in', chunk)
-      .where('role', '==', 'donor') // only users with donor role
       .get();
 
     snapshot.docs.forEach(doc => {
@@ -368,4 +387,5 @@ module.exports = {
   createNotification, getUserNotifications, markNotificationsRead,
   getAllUsers, getDoctor,
   getDonorsByPhoneNumbers,
+  getUserByPhone,
 };

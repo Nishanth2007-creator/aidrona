@@ -77,10 +77,11 @@ class _DonorIncomingScreenState extends State<DonorIncomingScreen>
 
   @override
   Widget build(BuildContext context) {
-    if (_loading && _crisis == null)
+    if (_loading && _crisis == null) {
       return const Scaffold(
           body: Center(
               child: CircularProgressIndicator(color: AppTheme.primary)));
+    }
 
     if (_filled && !_responded) {
       return _buildFilledScreen();

@@ -1,9 +1,10 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
+// Use the free-tier SDK
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); 
+const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" }); 
 
-async function callGemini(prompt, type = 'triage', imageBase64 = null) {
+async function callGemini(prompt, type = 'triage', imageBase64 = null, fallbackData = {}) {
   try {
     const parts = [{ text: prompt }];
     if (imageBase64) {
@@ -14,15 +15,36 @@ async function callGemini(prompt, type = 'triage', imageBase64 = null) {
         }
       });
     }
+
     const result = await model.generateContent(parts);
     const text = result.response.text().trim();
+    
     const clean = text.replace(/^```json\n?/, '').replace(/\n?```$/, '');
     return JSON.parse(clean);
   } catch (err) {
-    console.error(`Gemini Error [${type}]:`, err.message);
-    // Safety Fallbacks so Firestore never gets 'undefined'
+    if (err.message.includes('429')) {
+      console.log(`[AI] Info: Gemini quota reached. Using Backup Logic for ${type}...`);
+    } else {
+      console.error(`Gemini Error [${type}]:`, err.message);
+    }
+    
+    // Safety Fallbacks (Works for FREE even if API is down)
     if (type === 'triage') return { severity_score: 7, recommended_radius_km: 10, estimated_response_minutes: 20, triage_reasoning: "Safe fallback due to API error" };
-    if (type === 'ranking') return { ranked_donor_ids: [], expand_if_no_response_mins: 5, escalate_to_bank: false };
+    
+    if (type === 'ranking') {
+      // If AI fails, we manually rank by distance (simplest logic)
+      const candidateIds = fallbackData.candidates 
+        ? fallbackData.candidates
+            .sort((a, b) => (a.distance_km || 0) - (b.distance_km || 0))
+            .map(c => c.donor_id) 
+        : [];
+      return { 
+        ranked_donor_ids: candidateIds.slice(0, 10), 
+        expand_if_no_response_mins: 5, 
+        escalate_to_bank: false 
+      };
+    }
+    
     if (type === 'fitness') return { fitness_score: 80, is_eligible: true, disqualifiers_found: [], score_reasoning: "Safe fallback", extracted_hemoglobin: 12.0, extracted_medications: [], extracted_conditions: [] };
     return {};
   }
@@ -53,7 +75,7 @@ ${donorList}
 
 Respond with exactly: { "ranked_donor_ids": ["id1", "id2", ...], "expand_if_no_response_mins": 5, escalate_to_bank: false }`;
 
-  return await callGemini(prompt, 'ranking');
+  return await callGemini(prompt, 'ranking', null, { candidates: donor_candidates });
 }
 
 async function evaluateDonorFitness({ base64_image, last_donation_days, donation_count, doctor_unfit_count }) {
