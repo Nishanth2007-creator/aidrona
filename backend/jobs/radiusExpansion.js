@@ -5,9 +5,16 @@ const {
   getNearestBloodBank, getDonorResponsesByCrisis,
 } = require('../db/firestore');
 
+let isJobRunning = false;
+
 // Runs every 2 minutes
 cron.schedule('*/2 * * * *', async () => {
-  console.log('[Cron] Checking open crisis requests...');
+  if (isJobRunning) {
+    console.log('[Cron] Job already in progress, skipping...');
+    return;
+  }
+  isJobRunning = true;
+  console.log('[Cron] Checking open crisis requests at', new Date().toISOString());
   try {
     const openRequests = await getOpenCrisisRequests();
 
@@ -74,6 +81,8 @@ cron.schedule('*/2 * * * *', async () => {
     }
   } catch (err) {
     console.error('[Cron] Error in radius expansion job:', err);
+  } finally {
+    isJobRunning = false;
   }
 });
 

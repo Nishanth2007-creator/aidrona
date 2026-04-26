@@ -1,18 +1,36 @@
 const admin = require('firebase-admin');
 const path = require('path');
 
-const keyFile = process.env.GOOGLE_APPLICATION_CREDENTIALS 
-  ? path.resolve(__dirname, '..', process.env.GOOGLE_APPLICATION_CREDENTIALS.replace(/"/g, '')) 
-  : path.join(__dirname, '..', 'service-account-key.json');
+let serviceAccount;
 
-if (!admin.apps.length) {
+if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+  try {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  } catch (err) {
+    console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON:', err.message);
+  }
+}
+
+if (!serviceAccount) {
+  const keyFile = process.env.GOOGLE_APPLICATION_CREDENTIALS 
+    ? path.resolve(__dirname, '..', process.env.GOOGLE_APPLICATION_CREDENTIALS.replace(/"/g, '')) 
+    : path.join(__dirname, '..', 'service-account-key.json');
+  
+  try {
+    serviceAccount = require(keyFile);
+  } catch (err) {
+    console.warn('Could not find service account key file. Ensure FIREBASE_SERVICE_ACCOUNT_JSON or GOOGLE_APPLICATION_CREDENTIALS is set.');
+  }
+}
+
+if (!admin.apps.length && serviceAccount) {
   admin.initializeApp({
-    credential: admin.credential.cert(require(keyFile))
+    credential: admin.credential.cert(serviceAccount)
   });
 }
 
 const { getFirestore, GeoPoint, FieldValue, Timestamp } = require('firebase-admin/firestore');
-const db = getFirestore('default');
+const db = getFirestore('default'); // Use verified 'default' database ID
 db.settings({ ignoreUndefinedProperties: true }); // ✅ Fix: Ignore undefined fields to prevent crashes
 const Firestore = { Timestamp }; 
 

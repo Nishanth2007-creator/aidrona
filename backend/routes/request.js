@@ -105,9 +105,12 @@ router.post('/blood', async (req, res) => {
           donors_notified++;
         }
         await updateCrisisRequest(crisis_id, { contacts_only: false, donors_notified_count: donors_notified });
+      } else {
+        // Even if no strangers found initially, we are now in strangers phase
+        await updateCrisisRequest(crisis_id, { contacts_only: false, donors_notified_count: 0 });
       }
     } else {
-      // If we did notify contacts, update the count too
+      // If we did notify contacts, update the count
       await updateCrisisRequest(crisis_id, { donors_notified_count: donors_notified });
     }
     console.log(`[Request] Completed. Notified: ${donors_notified} via ${phase}`);
