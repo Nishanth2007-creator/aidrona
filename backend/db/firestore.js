@@ -9,25 +9,34 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
     const parsed = JSON.parse(rawJson);
     
     if (parsed.private_key) {
-      // THE NUCLEAR FIX:
-      // 1. Convert any literal "\\n" to actual newlines
-      // 2. Remove any accidental extra spaces or double newlines
-      let key = parsed.private_key.replace(/\\n/g, '\n').trim();
+      // SUPER ROBUST PEM CLEANING:
+      let key = parsed.private_key.replace(/\\n/g, '\n');
+      const header = '-----BEGIN PRIVATE KEY-----';
+      const footer = '-----END PRIVATE KEY-----';
       
-      // 3. Ensure it starts/ends with correct tags if it got mangled
-      if (!key.includes('-----BEGIN PRIVATE KEY-----')) {
-        key = `-----BEGIN PRIVATE KEY-----\n${key}`;
-      }
-      if (!key.includes('-----END PRIVATE KEY-----')) {
-        key = `${key}\n-----END PRIVATE KEY-----\n`;
-      }
+      // 1. Strip headers/footers if they exist
+      let content = key.replace(header, '').replace(footer, '').trim();
       
-      parsed.private_key = key;
+      // 2. Remove all internal whitespace/newlines (base64 should be contiguous)
+      content = content.replace(/\s+/g, '');
+      
+      // 3. Reconstruct with mandatory newlines
+      parsed.private_key = `${header}\n${content}\n${footer}\n`;
+      
       serviceAccount = parsed;
-      console.log('[Firebase] Successfully cleaned and parsed FIREBASE_SERVICE_ACCOUNT_JSON');
+      console.log('[Firebase] Successfully cleaned FIREBASE_SERVICE_ACCOUNT_JSON');
+      console.log(`[Firebase] Project: ${parsed.project_id}, Key Length: ${parsed.private_key.length}`);
+    } else {
+      console.error('[Firebase] FIREBASE_SERVICE_ACCOUNT_JSON is missing private_key field');
     }
   } catch (err) {
     console.error('[Firebase] Critical failure parsing FIREBASE_SERVICE_ACCOUNT_JSON:', err.message);
+    // If it's not JSON, maybe they just put the private key string in there?
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON.includes('BEGIN PRIVATE KEY')) {
+       console.log('[Firebase] Attempting to treat FIREBASE_SERVICE_ACCOUNT_JSON as raw private key...');
+       // This would require other fields to be set, which might be risky. 
+       // For now, let's stick to JSON.
+    }
   }
 }
 
