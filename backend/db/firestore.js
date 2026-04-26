@@ -5,13 +5,24 @@ let serviceAccount;
 
 if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
   try {
-    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-    // Fix: Some hosting platforms escape \n in env vars
+    const rawJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON.trim();
+    serviceAccount = JSON.parse(rawJson);
+    
     if (serviceAccount.private_key) {
-      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+      // 1. Replace literal "\n" with actual newlines
+      // 2. Remove any extra quotes that might have been added by the UI
+      serviceAccount.private_key = serviceAccount.private_key
+        .replace(/\\n/g, '\n')
+        .replace(/\n\n/g, '\n') // Remove double newlines
+        .trim();
+      
+      if (serviceAccount.private_key.startsWith('"') && serviceAccount.private_key.endsWith('"')) {
+        serviceAccount.private_key = serviceAccount.private_key.slice(1, -1);
+      }
     }
+    console.log('[Firebase] Loaded config from FIREBASE_SERVICE_ACCOUNT_JSON');
   } catch (err) {
-    console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON:', err.message);
+    console.error('[Firebase] Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON:', err.message);
   }
 }
 
