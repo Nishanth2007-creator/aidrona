@@ -6,23 +6,28 @@ let serviceAccount;
 if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
   try {
     const rawJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON.trim();
-    serviceAccount = JSON.parse(rawJson);
+    const parsed = JSON.parse(rawJson);
     
-    if (serviceAccount.private_key) {
-      // 1. Replace literal "\n" with actual newlines
-      // 2. Remove any extra quotes that might have been added by the UI
-      serviceAccount.private_key = serviceAccount.private_key
-        .replace(/\\n/g, '\n')
-        .replace(/\n\n/g, '\n') // Remove double newlines
-        .trim();
+    if (parsed.private_key) {
+      // THE NUCLEAR FIX:
+      // 1. Convert any literal "\\n" to actual newlines
+      // 2. Remove any accidental extra spaces or double newlines
+      let key = parsed.private_key.replace(/\\n/g, '\n').trim();
       
-      if (serviceAccount.private_key.startsWith('"') && serviceAccount.private_key.endsWith('"')) {
-        serviceAccount.private_key = serviceAccount.private_key.slice(1, -1);
+      // 3. Ensure it starts/ends with correct tags if it got mangled
+      if (!key.includes('-----BEGIN PRIVATE KEY-----')) {
+        key = `-----BEGIN PRIVATE KEY-----\n${key}`;
       }
+      if (!key.includes('-----END PRIVATE KEY-----')) {
+        key = `${key}\n-----END PRIVATE KEY-----\n`;
+      }
+      
+      parsed.private_key = key;
+      serviceAccount = parsed;
+      console.log('[Firebase] Successfully cleaned and parsed FIREBASE_SERVICE_ACCOUNT_JSON');
     }
-    console.log('[Firebase] Loaded config from FIREBASE_SERVICE_ACCOUNT_JSON');
   } catch (err) {
-    console.error('[Firebase] Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON:', err.message);
+    console.error('[Firebase] Critical failure parsing FIREBASE_SERVICE_ACCOUNT_JSON:', err.message);
   }
 }
 
