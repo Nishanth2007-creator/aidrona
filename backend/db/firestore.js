@@ -6,6 +6,10 @@ let serviceAccount;
 if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
   try {
     serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    // Fix: Some hosting platforms escape \n in env vars
+    if (serviceAccount.private_key) {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+    }
   } catch (err) {
     console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON:', err.message);
   }
