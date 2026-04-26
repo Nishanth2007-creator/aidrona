@@ -18,7 +18,7 @@ class ApiService {
       }
       return 'http://localhost:8085/api'; // Windows / iOS Simulator
     }
-    return 'https://api.aidrona.app/api';
+    return 'https://aidrona.onrender.com/api';
   }
 
   static const Duration _timeout = Duration(seconds: 10);
