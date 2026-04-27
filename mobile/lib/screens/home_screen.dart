@@ -10,6 +10,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import '../widgets/fitness_ring.dart';
 import '../widgets/eligibility_badge.dart';
 import '../widgets/activity_card.dart';
+import '../services/location_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,7 +26,17 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadSummary());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadSummary();
+      // Start periodic GPS location syncing
+      final uid = context.read<AuthService>().uid;
+      if (uid != null) {
+        final locationService = context.read<LocationService>();
+        if (!locationService.isRunning) {
+          locationService.start(uid);
+        }
+      }
+    });
     _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) => _loadSummary());
   }
 
@@ -50,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
       
       // Sync FCM token
       final fcmToken = await FirebaseMessaging.instance.getToken();
-      if (fcmToken != null) {
+      if (fcmToken != null && mounted) {
         await context.read<ApiService>().updateUserProfile(uid, {'fcm_token': fcmToken});
       }
     } catch (_) {}

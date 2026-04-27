@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { createUser, createDonorProfile, getUser, updateUser, getDoctor, getUserByPhone } = require('../db/firestore');
+const { createUser, createDonorProfile, getUser, updateUser, updateDonorProfile, getDoctor, getUserByPhone } = require('../db/firestore');
 const { evaluateDonorFitness } = require('../ai/gemini');
+const { GeoPoint } = require('firebase-admin/firestore');
 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
@@ -37,7 +38,7 @@ router.post('/register', async (req, res) => {
       doctor_unfit_count: 0,
     });
 
-    await createDonorProfile(uid, { ...initialFitness, blood_type });
+    await createDonorProfile(uid, { ...initialFitness, blood_type, lat: lat || 0, lng: lng || 0 });
 
     return res.status(201).json({ message: 'User registered', fitness: initialFitness });
   } catch (err) {
@@ -77,6 +78,24 @@ router.patch('/user/:uid', async (req, res) => {
       if (req.body[key] !== undefined) update[key] = req.body[key];
     }
     if (Object.keys(update).length === 0) return res.status(400).json({ error: 'No valid fields to update' });
+
+    // If lat/lng are being updated, also update the GeoPoint and donor_profiles
+    if (update.lat !== undefined && update.lng !== undefined) {
+      update.location = new GeoPoint(update.lat, update.lng);
+      update.location_updated_at = new Date().toISOString();
+
+      // Also sync denormalized lat/lng on donor_profiles for proximity search
+      try {
+        await updateDonorProfile(req.params.uid, {
+          lat: update.lat,
+          lng: update.lng,
+        });
+      } catch (dpErr) {
+        // Donor profile may not exist for all users (e.g. pure patients) — that's ok
+        console.warn(`[Location] Could not update donor_profiles for ${req.params.uid}: ${dpErr.message}`);
+      }
+    }
+
     await updateUser(req.params.uid, update);
     return res.json({ message: 'User updated' });
   } catch (err) {

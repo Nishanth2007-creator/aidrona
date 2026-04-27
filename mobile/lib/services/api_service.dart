@@ -57,7 +57,7 @@ class ApiService {
 
   List<dynamic> _decodeList(http.Response res) {
     if (res.statusCode >= 400) {
-      print('API Error [${res.statusCode}]: ${res.body}');
+      debugPrint('API Error [${res.statusCode}]: ${res.body}');
       return [];
     }
     try {
@@ -65,7 +65,7 @@ class ApiService {
       if (decoded is List) return decoded;
       return [];
     } catch (e) {
-      print('JSON Parse Error: $e');
+      debugPrint('JSON Parse Error: $e');
       return [];
     }
   }

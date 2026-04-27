@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'services/auth_service.dart';
 import 'services/api_service.dart';
+import 'services/location_service.dart';
 import 'providers/user_provider.dart';
 import 'providers/crisis_provider.dart';
 import 'screens/splash_screen.dart';
@@ -98,6 +99,7 @@ class _AiDronaAppState extends State<AiDronaApp> {
         ChangeNotifierProvider(create: (_) => CrisisProvider()),
         Provider(create: (_) => AuthService()),
         Provider(create: (_) => ApiService()),
+        Provider(create: (ctx) => LocationService(ctx.read<ApiService>())),
       ],
       child: MaterialApp.router(
         title: 'AiDrona',

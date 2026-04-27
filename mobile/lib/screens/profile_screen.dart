@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/location_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/eligibility_badge.dart';
 
@@ -94,6 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // Danger zone
           _section('Account', [
             _actionTile('Sign Out', Icons.logout_rounded, AppTheme.onSurfaceMuted, () async {
+              context.read<LocationService>().stop();
               await context.read<AuthService>().signOut();
               if (context.mounted) context.go('/onboarding');
             }),
@@ -113,10 +115,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         if (uid == null) return;
                         final apiService = context.read<ApiService>();
                         final authService = context.read<AuthService>();
+                        final locationService = context.read<LocationService>();
                         try {
                           await apiService.deleteAccount(uid);
                         } catch (_) {}
                         try {
+                          locationService.stop();
                           await authService.signOut();
                         } catch (_) {}
                         if (context.mounted) context.go('/onboarding');
