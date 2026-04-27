@@ -82,11 +82,22 @@ class _RequestBloodScreenState extends State<RequestBloodScreen> {
         return;
       }
 
-      _position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 15),
-      );
-      if (mounted) setState(() {});
+      // Try to get a fresh position first
+      try {
+        _position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 25),
+        );
+      } catch (e) {
+        debugPrint('Fresh location fetch failed: $e. Falling back to last known.');
+        _position = await Geolocator.getLastKnownPosition();
+      }
+
+      if (_position == null) {
+        setState(() => _error = 'Could not determine location. Please ensure GPS is enabled and try again.');
+      } else {
+        if (mounted) setState(() {});
+      }
     } catch (e) {
       setState(() => _error = 'Failed to get location: $e');
     }

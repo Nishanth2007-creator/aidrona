@@ -65,10 +65,18 @@ class LocationService {
       }
 
       // Get current position (medium accuracy is fine for proximity matching)
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 10),
-      );
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 20),
+        );
+      } catch (e) {
+        debugPrint('[LocationService] Fresh fetch failed: $e. Using last known.');
+        position = await Geolocator.getLastKnownPosition();
+      }
+
+      if (position == null) return;
 
       // Only send update if the user has moved significantly
       if (_lastSyncedPosition != null) {
